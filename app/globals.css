@@ -2,87 +2,173 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
-    --radius: 0.75rem;
+:root {
+  --background: 0 0% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 0 0% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --popover: 0 0% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 0 0% 98%;
+  --primary-foreground: 0 0% 9%;
+  --secondary: 0 0% 14.9%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 0 0% 14.9%;
+  --muted-foreground: 0 0% 63.9%;
+  --accent: 0 0% 14.9%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 14.9%;
+  --input: 0 0% 14.9%;
+  --ring: 0 0% 83.1%;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: 0 0% 0%;
+  --foreground: 0 0% 98%;
+  --card: 0 0% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --popover: 0 0% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 0 0% 98%;
+  --primary-foreground: 0 0% 9%;
+  --secondary: 0 0% 14.9%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 0 0% 14.9%;
+  --muted-foreground: 0 0% 63.9%;
+  --accent: 0 0% 14.9%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 14.9%;
+  --input: 0 0% 14.9%;
+  --ring: 0 0% 83.1%;
+}
+
+body {
+  @apply bg-black text-white;
+}
+
+/* Gold shimmer effect */
+.gold-shimmer {
+  background: linear-gradient(90deg, #ffd700 0%, #f5cc00 20%, #ffec80 40%, #ffd700 60%, #f5cc00 80%, #ffec80 100%);
+  background-size: 200% auto;
+  animation: shimmer 8s linear infinite;
+  color: #1e3a8a;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 5px rgba(255, 215, 0, 0.3), 0 0 10px rgba(255, 215, 0, 0.2), 0 0 15px rgba(255, 215, 0, 0.1);
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.gold-shimmer:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.4), 0 0 20px rgba(255, 215, 0, 0.3), 0 0 30px rgba(255, 215, 0, 0.2);
+}
+
+/* Glass card effect */
+.glass-card {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 215, 0, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 215, 0, 0.2);
+  box-shadow: 0 7px 14px rgba(0, 0, 0, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Neomorphism effect */
+.neomorphism {
+  background: linear-gradient(145deg, #0a0a0a, #080808);
+  box-shadow: 5px 5px 10px #050505, -5px -5px 10px #0f0f0f, inset 0 0 0 rgba(255, 215, 0, 0.1);
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.neomorphism:hover {
+  box-shadow: 5px 5px 10px #050505, -5px -5px 10px #0f0f0f, inset 0 0 5px rgba(255, 215, 0, 0.2);
+}
+
+/* Glow effects */
+.glow-gold {
+  text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+}
+
+.glow-silver {
+  text-shadow: 0 0 5px rgba(192, 192, 192, 0.5);
+}
+
+/* Loading dots animation */
+.loading-dots::after {
+  content: "";
+  animation: dots 1.5s infinite;
+}
+
+@keyframes dots {
+  0%,
+  20% {
+    content: ".";
+  }
+  40% {
+    content: "..";
+  }
+  60%,
+  100% {
+    content: "...";
   }
 }
 
-@layer utilities {
-  .glass-card {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-  }
+/* Button alignment in cards */
+.card-buttons-aligned {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
 
-  .neomorphism {
-    background: linear-gradient(145deg, #1e293b, #0f172a);
-    box-shadow: 20px 20px 60px #0a0f1a, -20px -20px 60px #2a3441;
-  }
+.card-buttons-aligned .button-container {
+  margin-top: auto;
+  padding-top: 1rem;
+}
 
-  .shimmer {
-    background: linear-gradient(45deg, #3b82f6, #8b5cf6, #06b6d4, #3b82f6);
-    background-size: 400% 400%;
-    animation: shimmer 3s ease-in-out infinite;
-  }
+/* Testimonial name alignment */
+.testimonial-names-aligned {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
 
-  @keyframes shimmer {
-    0%,
-    100% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-  }
+.testimonial-names-aligned .testimonial-author {
+  margin-top: auto;
+  padding-top: 1rem;
+}
 
-  .fade-in {
-    animation: fadeIn 0.6s ease-out;
+/* Auto-dismiss animation */
+@keyframes countdown {
+  from {
+    width: 100%;
   }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  to {
+    width: 0%;
   }
+}
 
-  .slide-in-left {
-    animation: slideInLeft 0.6s ease-out;
-  }
+.auto-dismiss-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: rgba(255, 215, 0, 0.5);
+  animation: countdown linear forwards;
+}
 
-  @keyframes slideInLeft {
-    from {
-      opacity: 0;
-      transform: translateX(-30px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .gold-shimmer {
+    box-shadow: 0 0 3px rgba(255, 215, 0, 0.3), 0 0 6px rgba(255, 215, 0, 0.2);
   }
 }

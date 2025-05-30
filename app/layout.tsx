@@ -15,9 +15,10 @@ import { GlobalPopupManager } from "@/components/global-popup-manager"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "AuditPro - AI-Powered Website Audit Tool",
-  description: "Optimize your website with comprehensive SEO, performance, security, and UX audits",
-    generator: 'v0.dev'
+  title: "AutomatIQ.AI - AI-Powered Website Audit Tool",
+  description:
+    "Optimize your website with comprehensive SEO, performance, security, and UX audits powered by AutomatIQ.AI",
+  generator: "v0.dev",
 }
 
 export default function RootLayout({
@@ -27,7 +28,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.className} bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen`}>
+      <body className={`${inter.className} bg-black min-h-screen`}>
         <AuthProvider>
           <SidebarProvider>
             <NotificationProvider>

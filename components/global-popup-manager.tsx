@@ -6,35 +6,38 @@ export function GlobalPopupManager() {
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        // Close any open dialogs by dispatching a custom event
-        const closeEvent = new CustomEvent("closeAllPopups")
-        window.dispatchEvent(closeEvent)
+        // Dispatch custom event to close all popups
+        window.dispatchEvent(new CustomEvent("closeAllPopups"))
       }
     }
 
-    // Add global escape key listener
-    document.addEventListener("keydown", handleEscapeKey)
-
-    // Add global click outside listener for custom popups
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element
 
-      // Check if click is outside any popup/modal
-      const isInsideModal =
-        target.closest('[role="dialog"]') || target.closest(".popup-container") || target.closest("[data-popup]")
+      // Check if click is outside any popup
+      const popups = document.querySelectorAll("[data-popup]")
+      let clickedInsidePopup = false
 
-      if (!isInsideModal) {
-        // Only close custom popups, not shadcn dialogs (they handle this themselves)
-        const customCloseEvent = new CustomEvent("closeCustomPopups")
-        window.dispatchEvent(customCloseEvent)
+      popups.forEach((popup) => {
+        if (popup.contains(target)) {
+          clickedInsidePopup = true
+        }
+      })
+
+      // If clicked outside all popups, close them
+      if (!clickedInsidePopup && popups.length > 0) {
+        window.dispatchEvent(new CustomEvent("closeCustomPopups"))
       }
     }
 
-    document.addEventListener("mousedown", handleClickOutside)
+    // Add event listeners
+    document.addEventListener("keydown", handleEscapeKey)
+    document.addEventListener("click", handleClickOutside)
 
+    // Cleanup
     return () => {
       document.removeEventListener("keydown", handleEscapeKey)
-      document.removeEventListener("mousedown", handleClickOutside)
+      document.removeEventListener("click", handleClickOutside)
     }
   }, [])
 

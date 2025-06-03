@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a2e" stop-opacity="1" />
+      <stop offset="100%" stop-color="#0f3460" stop-opacity="1" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#grad)" />
+  <rect 
+    x="360" 
+    y="220" 
+    width="480" 
+    height="190" 
+    stroke="#e2b714" 
+    stroke-width="4" 
+    fill="none" 
+    rx="10"
+  />
+  <line 
+    x1="360" 
+    y1="220" 
+    x2="840" 
+    y2="410" 
+    stroke="#e2b714" 
+    stroke-width="4" 
+  />
+  <line 
+    x1="840" 
+    y1="220" 
+    x2="360" 
+    y2="410" 
+    stroke="#e2b714" 
+    stroke-width="4" 
+  />
+  <text 
+    x="50%" 
+    y="85%" 
+    font-family="system-ui, sans-serif" 
+    font-size="40px" 
+    fill="#e2b714" 
+    text-anchor="middle" 
+    dominant-baseline="middle"
+  >
+    1200 × 630
+  </text>
+</svg>

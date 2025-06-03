@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { DoubleFooter } from "@/components/double-footer"
 import { Search, Calendar, User, ArrowRight, TrendingUp, Zap, Shield, BarChart3, Globe, Filter } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Header } from "@/components/header"
 
 export default function BlogPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -160,253 +161,157 @@ export default function BlogPage() {
   })
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-white/10 px-4">
-          <SidebarTrigger className="-ml-1" />
-          <div className="flex-1">
-            <h1 className="text-xl font-semibold text-white">Blog</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search articles..."
-                className="pl-10 neomorphism border-0 text-white placeholder-gray-400 w-64"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
-        </header>
-
-        <div className="flex-1 overflow-auto">
-          <div className="space-y-8 p-6">
-            {/* Header */}
-            <div className="text-center space-y-4">
-              <h1 className="text-4xl font-bold text-white">Website Optimization Blog</h1>
-              <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-                Expert insights, tips, and strategies to help you optimize your website for better performance, SEO, and
-                user experience.
+    <div className="flex min-h-screen flex-col bg-background">
+      {/* Header */}
+      <Header />
+      
+      {/* Main Content */}
+      <main className="flex-1 pt-20 sm:pt-24 lg:pt-32">
+        <div className="section-padding">
+          <div className="container mx-auto">
+            {/* Page Header */}
+            <div className="text-center mb-12 max-w-4xl mx-auto">
+              <h1 className="text-4xl md:text-5xl font-bold shimmer-title mb-4">
+                AutomatIQ.AI Blog
+              </h1>
+              <p className="text-lg text-white mb-8">
+                Latest insights, tips, and best practices for website optimization, SEO, performance, and digital growth.
               </p>
-            </div>
-
-            {/* Filter Controls */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-              <div className="flex flex-wrap gap-3 justify-center">
-                {categories.map((category, index) => (
-                  <Link
-                    key={index}
-                    href={
-                      category.name === "All"
-                        ? "/blog"
-                        : `/blog/category/${category.name.toLowerCase().replace(/\s+/g, "-").replace("&", "")}`
-                    }
-                  >
-                    <Button
-                      variant="outline"
-                      className={`border-white/20 text-white hover:bg-white/10 ${
-                        category.name === selectedCategory ? "bg-blue-500/20 border-blue-500/30" : ""
-                      }`}
-                    >
-                      <category.icon className="w-4 h-4 mr-2" />
-                      {category.name} ({category.count})
-                    </Button>
-                  </Link>
-                ))}
-              </div>
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-gray-400" />
-                <Select defaultValue="newest">
-                  <SelectTrigger className="w-[180px] border-white/20 bg-white/5 text-white">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="newest">Newest First</SelectItem>
-                    <SelectItem value="oldest">Oldest First</SelectItem>
-                    <SelectItem value="popular">Most Popular</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Featured Post */}
-            <Card className="glass-card border-white/10 overflow-hidden">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-                <div className="aspect-video lg:aspect-auto">
-                  <img
-                    src={featuredPost.image || "/placeholder.svg"}
-                    alt={featuredPost.title}
-                    className="w-full h-full object-cover"
+              
+              {/* Search */}
+              <div className="max-w-md mx-auto mb-8">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Input
+                    placeholder="Search articles..."
+                    className="pl-12 glass-card border-gold/30 text-white placeholder-gray-400"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
-                <div className="p-8 flex flex-col justify-center">
-                  <Badge className="w-fit mb-4 bg-blue-500/20 text-blue-400 border-blue-500/30">Featured Article</Badge>
-                  <h2 className="text-2xl font-bold text-white mb-4 leading-tight">{featuredPost.title}</h2>
-                  <p className="text-gray-300 mb-6">{featuredPost.excerpt}</p>
-                  <div className="flex items-center gap-4 mb-6 text-sm text-gray-400">
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      <span>{featuredPost.author}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      <span>{featuredPost.date}</span>
-                    </div>
-                    <span>{featuredPost.readTime}</span>
-                  </div>
-                  <Link href={`/blog/${featuredPost.slug}`}>
-                    <Button className="w-fit shimmer text-white font-semibold">
-                      Read Article
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </Card>
-
-            {/* Browse Categories Section */}
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-white">Browse by Category</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {categories
-                  .filter((cat) => cat.name !== "All")
-                  .map((category, index) => {
-                    const IconComponent = category.icon
-                    return (
-                      <Link
-                        key={index}
-                        href={`/blog/category/${category.name.toLowerCase().replace(/\s+/g, "-").replace("&", "")}`}
-                      >
-                        <Card className="glass-card border-white/10 hover:border-white/20 transition-all duration-300 group cursor-pointer">
-                          <CardContent className="p-6">
-                            <div className="flex items-center gap-4">
-                              <div className="p-3 rounded-full bg-white/5">
-                                <IconComponent className="w-6 h-6 text-blue-400" />
-                              </div>
-                              <div className="flex-1">
-                                <h3 className="text-white font-semibold group-hover:text-blue-400 transition-colors">
-                                  {category.name}
-                                </h3>
-                                <p className="text-gray-400 text-sm">{category.count} articles</p>
-                              </div>
-                              <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-blue-400 transition-colors" />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    )
-                  })}
               </div>
             </div>
 
-            {/* Blog Posts Grid */}
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-white">
-                {searchQuery || selectedCategory !== "All"
-                  ? `Search Results (${filteredPosts.length})`
-                  : "Latest Articles"}
-              </h2>
+            {/* Categories */}
+            <div className="flex flex-wrap justify-center gap-3 mb-12">
+              <Badge
+                className={`cursor-pointer transition-all duration-300 ${
+                  selectedCategory === "All" 
+                    ? "bg-gold text-navy hover:bg-gold/90" 
+                    : "bg-gold/20 text-gold border-gold/30 hover:bg-gold/30"
+                }`}
+                onClick={() => setSelectedCategory("All")}
+              >
+                All ({blogPosts.length})
+              </Badge>
+              {categories.map((category) => (
+                <Badge
+                  key={category.name}
+                  className={`cursor-pointer transition-all duration-300 ${
+                    selectedCategory === category.name
+                      ? `${getCategoryColor(category.name).replace("text-", "bg-").replace("border-", "").replace("/30", "")} text-navy hover:opacity-90`
+                      : `${getCategoryColor(category.name)} hover:bg-opacity-30`
+                  }`}
+                  onClick={() => setSelectedCategory(category.name)}
+                >
+                  {category.icon} {category.name} ({category.count})
+                </Badge>
+              ))}
+            </div>
 
-              {filteredPosts.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredPosts.map((post, index) => (
-                    <Card
-                      key={index}
-                      className="glass-card border-white/10 overflow-hidden hover:border-white/20 transition-all duration-300 group"
-                    >
-                      <div className="aspect-video overflow-hidden">
-                        <img
-                          src={post.image || "/placeholder.svg"}
-                          alt={post.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
+            {/* Featured Article */}
+            {featuredPost && (
+              <Card className="glass-card border-gold/20 mb-12 overflow-hidden hover-shadow">
+                <CardContent className="p-0">
+                  <div className="md:flex">
+                    <div className="md:w-1/2">
+                      <div className="h-64 md:h-full bg-gradient-to-br from-gold/20 to-silver/20 flex items-center justify-center">
+                        <div className="text-center text-gold">
+                          <div className="text-2xl font-bold mb-2">Featured Article</div>
+                          <div className="text-sm opacity-80">Latest Insights</div>
+                        </div>
                       </div>
-                      <CardHeader>
-                        <div className="flex items-center justify-between mb-2">
-                          <Badge className={getCategoryColor(post.category)}>{post.category}</Badge>
-                          <span className="text-xs text-gray-400">{post.readTime}</span>
-                        </div>
-                        <CardTitle className="text-white text-lg leading-tight group-hover:text-blue-400 transition-colors">
-                          {post.title}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <CardDescription className="text-gray-300 mb-4">{post.excerpt}</CardDescription>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4 text-sm text-gray-400">
-                            <div className="flex items-center gap-1">
-                              <User className="w-3 h-3" />
-                              <span>{post.author}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>{post.date}</span>
-                            </div>
+                    </div>
+                    <div className="md:w-1/2 p-8">
+                      <Badge className="mb-4 bg-gold/20 text-gold border-gold/30">Featured</Badge>
+                      <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 line-clamp-2">
+                        {featuredPost.title}
+                      </h2>
+                      <p className="text-gray-300 mb-6 line-clamp-3">{featuredPost.excerpt}</p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4 text-sm text-gray-400">
+                          <div className="flex items-center">
+                            <User className="w-4 h-4 mr-1" />
+                            {featuredPost.author}
                           </div>
-                          <Link href={`/blog/${post.slug}`}>
-                            <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300 p-0">
-                              Read More
-                              <ArrowRight className="w-3 h-3 ml-1" />
-                            </Button>
-                          </Link>
+                          <div className="flex items-center">
+                            <Calendar className="w-4 h-4 mr-1" />
+                            {featuredPost.readTime}
+                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-gray-400 text-lg">No articles found matching your search criteria.</p>
-                  <Button
-                    variant="outline"
-                    className="mt-4 border-white/20 text-white hover:bg-white/10"
-                    onClick={() => {
-                      setSearchQuery("")
-                      setSelectedCategory("All")
-                    }}
-                  >
-                    Clear Filters
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {/* Load More */}
-            {filteredPosts.length > 0 && (
-              <div className="text-center">
-                <Button variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10 px-8">
-                  Load More Articles
-                </Button>
-              </div>
+                        <Badge className={getCategoryColor(featuredPost.category)}>
+                          <Tag className="w-3 h-3 mr-1" />
+                          {featuredPost.category}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
-            {/* Newsletter Signup */}
-            <Card className="glass-card border-white/10 bg-gradient-to-r from-blue-600/20 to-purple-600/20">
-              <CardHeader className="text-center">
-                <CardTitle className="text-white text-2xl">Stay Updated</CardTitle>
-                <CardDescription className="text-gray-300">
-                  Get the latest website optimization tips and insights delivered to your inbox weekly.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-                  <Input
-                    type="email"
-                    placeholder="Enter your email"
-                    className="flex-1 neomorphism border-0 text-white placeholder-gray-400"
-                  />
-                  <Button className="shimmer text-white font-semibold">Subscribe</Button>
-                </div>
-                <p className="text-center text-xs text-gray-400 mt-4">No spam, unsubscribe at any time.</p>
-              </CardContent>
-            </Card>
-          </div>
+            {/* Articles Grid */}
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+              {filteredPosts.map((post, index) => (
+                <Card key={index} className="glass-card border-gold/10 overflow-hidden hover-shadow h-full">
+                  <CardHeader className="p-0">
+                    <div className="h-48 bg-gradient-to-br from-gold/10 to-silver/10 flex items-center justify-center">
+                      <div className="text-center text-gold">
+                        <div className="text-lg font-bold mb-1">Article</div>
+                        <div className="text-xs opacity-80">{post.category}</div>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6 flex flex-col h-full">
+                    <Badge className={`mb-3 w-fit ${getCategoryColor(post.category)}`}>
+                      <Tag className="w-3 h-3 mr-1" />
+                      {post.category}
+                    </Badge>
+                    <h3 className="text-xl font-bold text-white mb-3 line-clamp-2 flex-grow">
+                      {post.title}
+                    </h3>
+                    <p className="text-gray-300 mb-4 line-clamp-3 flex-grow">{post.excerpt}</p>
+                    <div className="flex items-center justify-between text-sm text-gray-400 mt-auto pt-4 border-t border-gold/10">
+                      <div className="flex items-center">
+                        <User className="w-4 h-4 mr-1" />
+                        {post.author}
+                      </div>
+                      <div className="flex items-center">
+                        <Calendar className="w-4 h-4 mr-1" />
+                        {post.readTime}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
 
-          <DoubleFooter />
+            {/* No Results */}
+            {filteredPosts.length === 0 && (
+              <div className="text-center py-12">
+                <div className="text-gray-400 text-6xl mb-4">📝</div>
+                <h3 className="text-xl font-semibold text-white mb-2">No articles found</h3>
+                <p className="text-gray-400">
+                  {searchQuery ? "Try adjusting your search terms" : "No articles in this category yet"}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-      </SidebarInset>
+      </main>
+      
+      {/* Footer */}
+      <DoubleFooter />
     </div>
   )
 }

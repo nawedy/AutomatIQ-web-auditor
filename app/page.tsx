@@ -2,259 +2,218 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
-import { motion } from "framer-motion"
-import { CheckCircle, ArrowRight, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Header } from "@/components/header"
-import { DoubleFooter } from "@/components/double-footer"
-import { ConversionTracker } from "@/components/ab-testing/conversion-tracker"
+import { OptimizedImage } from "@/components/ui/optimized-image"
+import { usePerformance } from "@/hooks/use-performance"
+
+// Simple Logo component with direct styling to ensure visibility
+function Logo() {
+  return (
+    <div className="flex items-center space-x-2 mb-6">
+      <div className="w-10 h-10 rounded-lg bg-[#D4AF37] flex items-center justify-center">
+        <span className="text-navy font-bold text-lg">A</span>
+      </div>
+      <span className="font-bold text-[#D4AF37] text-2xl">AutomatIQ.AI</span>
+    </div>
+  )
+}
 
 export default function LandingPage() {
-  const [email, setEmail] = useState("")
+  const { logPerformanceMetrics } = usePerformance()
+  const [imageLoadStats, setImageLoadStats] = useState({
+    loaded: 0,
+    failed: 0,
+    total: 6
+  })
 
-  // Features section data
-  const features = [
-    {
-      title: "SEO Analysis",
-      description: "Comprehensive SEO audit with actionable recommendations to improve your search rankings.",
-    },
-    {
-      title: "Performance Testing",
-      description: "Core Web Vitals and speed optimization insights to make your website lightning fast.",
-    },
-    {
-      title: "Security Scan",
-      description: "Vulnerability detection and security best practices to keep your website safe.",
-    },
-    {
-      title: "UX Evaluation",
-      description: "User experience analysis and accessibility checks for a better visitor experience.",
-    },
-  ]
+  useEffect(() => {
+    // Log performance metrics when the page loads
+    const handleLoad = () => {
+      logPerformanceMetrics()
+    }
 
-  // Testimonials data
-  const testimonials = [
-    {
-      quote:
-        "AutomatIQ.AI helped us increase our organic traffic by 137% in just 3 months by identifying critical SEO issues we didn't know existed.",
-      author: "Sarah Johnson",
-      role: "Marketing Director",
-      company: "TechStart Inc.",
-      stars: 5,
-    },
-    {
-      quote:
-        "The performance recommendations alone saved us thousands in development costs. Our site is now 3x faster and conversion rates have improved significantly.",
-      author: "Michael Chen",
-      role: "CTO",
-      company: "E-commerce Solutions",
-      stars: 5,
-    },
-    {
-      quote:
-        "As a small business owner, I was overwhelmed with website optimization. AutomatIQ.AI made it simple with clear, actionable recommendations.",
-      author: "Emily Rodriguez",
-      role: "Owner",
-      company: "Boutique Designs",
-      stars: 4,
-    },
-  ]
+    window.addEventListener('load', handleLoad)
+    return () => window.removeEventListener('load', handleLoad)
+  }, [])
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log("Email submitted:", email)
-    setEmail("")
-  }
+  // Track image loading stats
+  const handleImageLoad = useCallback(() => {
+    setImageLoadStats(prev => ({
+      ...prev,
+      loaded: prev.loaded + 1
+    }))
+  }, [])
+
+  const handleImageError = useCallback(() => {
+    setImageLoadStats(prev => ({
+      ...prev,
+      failed: prev.failed + 1
+    }))
+  }, [])
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <main className="min-h-screen bg-navy text-white">
       {/* Header */}
       <Header />
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 lg:pt-40 lg:pb-32">
-        <div className="absolute inset-0 bg-grid-white/5 bg-[size:30px_30px] opacity-20"></div>
-        <div className="container mx-auto px-4">
-          <div className="grid gap-12 lg:grid-cols-2 lg:gap-8">
-            <div className="flex flex-col justify-center">
-              <Badge className="mb-4 w-fit bg-gold/20 text-gold border-gold/30">AI-Powered Website Audits</Badge>
-              <motion.h1
-                className="mb-6 text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                Optimize Your Website with <span className="text-gold">AutomatIQ.AI</span>
-              </motion.h1>
-              <motion.p
-                className="mb-8 text-xl text-silver"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              >
-                Get comprehensive SEO, performance, security, and UX analysis with actionable recommendations to improve
-                your website's rankings and user experience.
-              </motion.p>
-              <motion.div
-                className="flex flex-col space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-              >
-                <Link href="/signup">
-                  <Button size="lg" className="gold-shimmer text-navy font-semibold">
-                    Start Free Trial
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="/demo">
-                  <Button size="lg" variant="outline" className="border-gold/30 text-gold hover:bg-gold/10">
-                    Watch Demo
-                  </Button>
-                </Link>
-              </motion.div>
-              <div className="mt-8 flex items-center space-x-2 text-sm text-silver">
-                <CheckCircle className="h-4 w-4 text-gold" />
-                <span>No credit card required</span>
-                <span className="mx-2">•</span>
-                <CheckCircle className="h-4 w-4 text-gold" />
-                <span>14-day free trial</span>
-                <span className="mx-2">•</span>
-                <CheckCircle className="h-4 w-4 text-gold" />
-                <span>Cancel anytime</span>
-              </div>
-            </div>
-            <div className="relative flex items-center justify-center lg:justify-end">
-              <div className="relative w-full max-w-lg overflow-hidden rounded-lg border border-gold/10 bg-black/20 shadow-2xl backdrop-blur-sm">
-                <div className="absolute inset-0 bg-gradient-to-br from-gold/5 to-silver/5"></div>
-                <img src="/placeholder.svg?height=600&width=800" alt="AutomatIQ.AI Dashboard" className="w-full" />
-              </div>
-              <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-gold/10 backdrop-blur-md"></div>
-              <div className="absolute -bottom-8 -left-8 h-40 w-40 rounded-full bg-silver/10 backdrop-blur-md"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="mb-12 text-center">
-            <Badge className="mb-4 bg-gold/20 text-gold border-gold/30">Powerful Features</Badge>
-            <h2 className="mb-4 text-3xl font-bold text-white sm:text-4xl">
-              Everything You Need to Optimize Your Website
-            </h2>
-            <p className="mx-auto max-w-2xl text-lg text-silver">
-              Our comprehensive suite of tools analyzes every aspect of your website to provide actionable insights and
-              recommendations.
+      <section className="py-12 md:py-16 bg-gradient-to-b from-navy to-darker-navy">
+        <div className="container px-4 mx-auto">
+          <div className="flex flex-col items-center justify-center">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 text-center">Website Audit Made Simple</h1>
+            <p className="text-xl mb-8 text-center max-w-2xl">
+              Get comprehensive insights and actionable recommendations to improve your website.
             </p>
-          </div>
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-            {features.map((feature, index) => (
-              <Card
-                key={index}
-                className="glass-card border-gold/10 overflow-hidden transition-all duration-300 hover:border-gold/20"
-              >
-                <CardContent className="p-6 flex flex-col h-full">
-                  <h3 className="mb-2 text-xl font-bold text-gold">{feature.title}</h3>
-                  <p className="text-silver flex-grow">{feature.description}</p>
-                  <div className="mt-4 pt-4 border-t border-gold/10 text-right">
-                    <Link href={`/tools/${feature.title.toLowerCase().replace(" ", "-")}`}>
-                      <Button variant="ghost" className="text-gold hover:bg-gold/10">
-                        Learn more <ArrowRight className="ml-1 h-4 w-4" />
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="mb-12 text-center">
-            <Badge className="mb-4 bg-gold/20 text-gold border-gold/30">Customer Success</Badge>
-            <h2 className="mb-4 text-3xl font-bold text-white sm:text-4xl">What Our Customers Say</h2>
-            <p className="mx-auto max-w-2xl text-lg text-silver">
-              Join thousands of satisfied customers who have improved their websites with AutomatIQ.AI
-            </p>
-          </div>
-          <div className="grid gap-8 md:grid-cols-3">
-            {testimonials.map((testimonial, index) => (
-              <Card
-                key={index}
-                className="glass-card border-gold/10 overflow-hidden transition-all duration-300 hover:border-gold/20"
-              >
-                <CardContent className="p-6 flex flex-col h-full">
-                  <div className="mb-4 flex">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-5 w-5 ${i < testimonial.stars ? "fill-gold text-gold" : "text-gray-600"}`}
-                      />
-                    ))}
-                  </div>
-                  <p className="mb-6 text-silver flex-grow">"{testimonial.quote}"</p>
-                  <div className="mt-auto">
-                    <p className="font-medium text-gold">{testimonial.author}</p>
-                    <p className="text-sm text-silver">
-                      {testimonial.role}, {testimonial.company}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-black to-black/80 border-y border-gold/10">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="mb-6 text-3xl font-bold text-white sm:text-4xl">Ready to Optimize Your Website?</h2>
-            <p className="mb-8 text-xl text-silver">Start your 14-day free trial today. No credit card required.</p>
-            <form onSubmit={handleSubmit} className="mx-auto flex max-w-md flex-col gap-4 sm:flex-row">
-              <Input
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="flex-1 border-gold/20 bg-black/50 text-white placeholder-silver/50"
-              />
-              <Button type="submit" className="gold-shimmer text-navy font-semibold">
-                Start Free Trial
+            <div className="flex flex-wrap gap-4 justify-center">
+              <Button size="lg" className="bg-gold hover:bg-gold/90 text-navy">
+                Start Free Audit
               </Button>
-            </form>
-            <p className="mt-4 text-sm text-silver">
-              By signing up, you agree to our{" "}
-              <Link href="/terms" className="text-gold hover:underline">
-                Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link href="/privacy" className="text-gold hover:underline">
-                Privacy Policy
-              </Link>
-              .
-            </p>
+              <Button size="lg" variant="outline" className="border-gold text-gold hover:bg-gold/10">
+                Learn More
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Basic Content */}
+      <section className="py-12 md:py-20">
+        <div className="container px-4 mx-auto">
+          <div className="flex justify-center">
+            <Logo />
+          </div>
+          <h1 className="text-3xl font-bold mb-6 text-center">Website Auditor</h1>
+          <p className="text-xl mb-8 text-center max-w-2xl mx-auto">
+            Get comprehensive SEO, performance, security, and UX analysis with actionable recommendations.  
+          </p>
+
+          {/* Image Loading Stats */}
+          <div className="bg-darker-navy p-4 rounded-lg mb-8 max-w-md mx-auto">
+            <h3 className="text-lg font-bold mb-2">Image Loading Stats</h3>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-sm text-gray-400">Total</p>
+                <p className="text-xl font-bold">{imageLoadStats.total}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-400">Loaded</p>
+                <p className="text-xl font-bold text-green-500">{imageLoadStats.loaded}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-400">Failed</p>
+                <p className="text-xl font-bold text-red-500">{imageLoadStats.failed}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Test Images */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-12">
+            {/* Test Case 1: Standard image with correct dimensions */}
+            <div className="glass-card p-6 rounded-lg">
+              <OptimizedImage 
+                src="/images/dashboard.png" 
+                alt="Dashboard" 
+                width={400} 
+                height={250}
+                className="rounded-lg mb-4"
+                priority={true}
+                onLoadingComplete={handleImageLoad}
+              />
+              <h3 className="text-xl font-bold mb-2">Priority Image</h3>
+              <p>Standard image with priority loading enabled.</p>
+            </div>
+
+            {/* Test Case 2: Non-existent image that should fall back to placeholder */}
+            <div className="glass-card p-6 rounded-lg">
+              <OptimizedImage 
+                src="/images/non-existent.png" 
+                alt="Non-existent Image" 
+                width={400} 
+                height={250}
+                className="rounded-lg mb-4"
+                onLoadingComplete={handleImageLoad}
+                onError={handleImageError}
+              />
+              <h3 className="text-xl font-bold mb-2">Fallback Test</h3>
+              <p>Non-existent image that should use the placeholder.</p>
+            </div>
+
+            {/* Test Case 3: Direct placeholder from API */}
+            <div className="glass-card p-6 rounded-lg">
+              <OptimizedImage 
+                src="/api/placeholder/400/250" 
+                alt="Direct Placeholder" 
+                width={400} 
+                height={250}
+                className="rounded-lg mb-4"
+                onLoadingComplete={handleImageLoad}
+              />
+              <h3 className="text-xl font-bold mb-2">Direct Placeholder</h3>
+              <p>Direct placeholder image from the API route.</p>
+            </div>
+
+            {/* Test Case 4: Image with custom dimensions */}
+            <div className="glass-card p-6 rounded-lg">
+              <OptimizedImage 
+                src="/images/seo-report.png" 
+                alt="SEO Report" 
+                width={800} 
+                height={600}
+                className="rounded-lg mb-4"
+                onLoadingComplete={handleImageLoad}
+              />
+              <h3 className="text-xl font-bold mb-2">Custom Dimensions</h3>
+              <p>Image with 800x600 dimensions to test scaling.</p>
+            </div>
+
+            {/* Test Case 5: SVG placeholder */}
+            <div className="glass-card p-6 rounded-lg">
+              <OptimizedImage 
+                src="/api/placeholder/800/600.svg" 
+                alt="SVG Placeholder" 
+                width={800} 
+                height={600}
+                className="rounded-lg mb-4"
+                onLoadingComplete={handleImageLoad}
+              />
+              <h3 className="text-xl font-bold mb-2">Static SVG</h3>
+              <p>Static SVG placeholder file from public directory.</p>
+            </div>
+
+            {/* Test Case 6: Image with fallback */}
+            <div className="glass-card p-6 rounded-lg">
+              <OptimizedImage 
+                src="/images/will-fail.jpg" 
+                alt="Image with Fallback" 
+                width={1200} 
+                height={630}
+                fallbackSrc="/api/placeholder/1200/630.svg"
+                className="rounded-lg mb-4"
+                onLoadingComplete={handleImageLoad}
+                onError={handleImageError}
+              />
+              <h3 className="text-xl font-bold mb-2">Custom Fallback</h3>
+              <p>Image with explicit fallback source specified.</p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <DoubleFooter />
-
-      {/* A/B Testing and Conversion Tracking */}
-      <ConversionTracker />
-    </div>
+      <footer className="py-8 border-t border-gray-800">
+        <div className="container px-4 mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <p> 2025 AutomatIQ.AI. All rights reserved.</p>
+            <div className="flex space-x-4 mt-4 md:mt-0">
+              <Link href="/privacy" className="hover:text-gold">Privacy Policy</Link>
+              <Link href="/terms" className="hover:text-gold">Terms of Service</Link>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </main>
   )
 }

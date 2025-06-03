@@ -2,6 +2,36 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 export async function middleware(request: NextRequest) {
+  // Handle placeholder image requests
+  if (request.nextUrl.pathname.startsWith('/api/placeholder/')) {
+    // Skip redirection if already requesting an SVG file
+    if (request.nextUrl.pathname.endsWith('.svg')) {
+      return NextResponse.next()
+    }
+    
+    const pathParts = request.nextUrl.pathname.split('/')
+    if (pathParts.length >= 4) {
+      const width = pathParts[3]
+      const height = pathParts[4] || ''
+      
+      // If we have both width and height, redirect to the static SVG
+      if (width && height) {
+        console.log(`Redirecting placeholder request to static SVG: ${width}x${height}`)
+        const potentialSvgPath = `/api/placeholder/${width}/${height}.svg`
+        
+        // Check for common dimensions we know exist
+        if ((width === '400' && height === '250') ||
+            (width === '800' && height === '600') ||
+            (width === '1200' && height === '630')) {
+          return NextResponse.redirect(new URL(potentialSvgPath, request.url))
+        }
+        
+        // For other dimensions, use the dynamic API route
+        return NextResponse.next()
+      }
+    }
+  }
+  
   const token = request.cookies.get("auth_token")?.value || request.headers.get("authorization")?.replace("Bearer ", "")
 
   // Protected routes
@@ -65,5 +95,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!api/auth|_next/static|_next/image|favicon.ico).*)",
+    "/api/placeholder/:path*"
+  ],
 }

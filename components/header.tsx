@@ -17,6 +17,7 @@ export function Header() {
 
   // Tools navigation items
   const tools = [
+    { name: "Website Audit", href: "/audit", description: "Comprehensive AI-powered website analysis and recommendations" },
     { name: "SEO Audit", href: "/tools/seo-audit", description: "Comprehensive SEO analysis and recommendations" },
     { name: "Performance Test", href: "/tools/performance", description: "Website speed and Core Web Vitals analysis" },
     { name: "Security Scan", href: "/tools/security", description: "Vulnerability detection and security assessment" },
@@ -24,17 +25,32 @@ export function Header() {
     { name: "Content Audit", href: "/tools/content-audit", description: "Content quality and optimization analysis" },
   ]
 
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 10) {
-        setIsScrolled(true)
-      } else {
-        setIsScrolled(false)
-      }
-    }
+  // Resources navigation items
+  const resources = [
+    { name: "Blogs", href: "/blog", description: "Latest insights and best practices" },
+    { name: "Case Studies", href: "/case-studies", description: "Real-world success stories and results" },
+  ]
 
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
+  useEffect(() => {
+    // Debounced scroll handler to improve performance
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const handleScroll = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        if (window.scrollY > 10) {
+          setIsScrolled(true);
+        } else {
+          setIsScrolled(false);
+        }
+      }, 10); // Small timeout for smoother transitions
+    };
+
+    // Use passive event listener for better performance
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      clearTimeout(timeoutId);
+    };
   }, [])
 
   return (
@@ -51,25 +67,16 @@ export function Header() {
             <div className="w-8 h-8 rounded-lg gold-shimmer flex items-center justify-center">
               <span className="text-navy font-bold text-sm">A</span>
             </div>
-            <span className="font-bold text-gold text-lg">AutomatIQ.AI</span>
+            <span className="font-bold text-shimmer-continuous text-lg">AutomatIQ.AI</span>
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-1">
-            <Link href="/dashboard" passHref>
-              <Button
-                variant="ghost"
-                className={cn("text-silver hover:text-gold", pathname === "/dashboard" && "text-gold bg-gold/10")}
-              >
-                Dashboard
-              </Button>
-            </Link>
-
             {/* Tools Dropdown */}
             <div className="relative group">
               <Button
                 variant="ghost"
-                className="text-silver hover:text-gold group flex items-center"
+                className="text-white hover:text-gold group flex items-center"
                 onClick={() => {}}
               >
                 Tools
@@ -85,7 +92,7 @@ export function Header() {
                       className="flex flex-col p-3 rounded-md hover:bg-gold/10 transition-colors"
                     >
                       <span className="text-gold font-medium">{tool.name}</span>
-                      <span className="text-silver/80 text-sm">{tool.description}</span>
+                      <span className="text-white/80 text-sm">{tool.description}</span>
                     </Link>
                   ))}
                 </div>
@@ -95,7 +102,7 @@ export function Header() {
             <Link href="/analytics" passHref>
               <Button
                 variant="ghost"
-                className={cn("text-silver hover:text-gold", pathname === "/analytics" && "text-gold bg-gold/10")}
+                className={cn("text-white hover:text-gold", pathname === "/analytics" && "text-gold bg-gold/10")}
               >
                 Analytics
               </Button>
@@ -104,30 +111,53 @@ export function Header() {
             <Link href="/reports" passHref>
               <Button
                 variant="ghost"
-                className={cn("text-silver hover:text-gold", pathname === "/reports" && "text-gold bg-gold/10")}
+                className={cn("text-white hover:text-gold", pathname === "/reports" && "text-gold bg-gold/10")}
               >
                 Reports
               </Button>
             </Link>
 
-            <Link href="/settings" passHref>
+            {/* Resources Dropdown */}
+            <div className="relative group">
               <Button
                 variant="ghost"
-                className={cn("text-silver hover:text-gold", pathname === "/settings" && "text-gold bg-gold/10")}
+                className="text-white hover:text-gold group flex items-center"
+                onClick={() => {}}
               >
-                Settings
+                Resources
+                <ChevronDown className="ml-1 h-4 w-4 transition-transform group-hover:rotate-180" />
               </Button>
-            </Link>
+
+              <div className="absolute left-0 mt-1 w-64 origin-top-left rounded-md bg-black border border-gold/20 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 backdrop-blur-xl">
+                <div className="p-4 grid gap-4">
+                  {resources.map((resource) => (
+                    <Link
+                      key={resource.name}
+                      href={resource.href}
+                      className="flex flex-col p-3 rounded-md hover:bg-gold/10 transition-colors"
+                    >
+                      <span className="text-gold font-medium">{resource.name}</span>
+                      <span className="text-white/80 text-sm">{resource.description}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
           </nav>
 
-          {/* Auth Buttons */}
+          {/* Auth Buttons & Dashboard */}
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
-              <Link href="/dashboard" passHref>
-                <Button variant="outline" className="border-gold/30 text-gold hover:bg-gold/10">
-                  My Dashboard
-                </Button>
-              </Link>
+              <>
+                <Link href="/dashboard" passHref>
+                  <Button
+                    variant="ghost"
+                    className={cn("text-white hover:text-gold", pathname === "/dashboard" && "text-gold bg-gold/10")}
+                  >
+                    Dashboard
+                  </Button>
+                </Link>
+              </>
             ) : (
               <>
                 <Link href="/login" passHref>
@@ -146,7 +176,7 @@ export function Header() {
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden text-silver"
+            className="md:hidden text-white"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
             {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -164,16 +194,6 @@ export function Header() {
           className="md:hidden bg-black/95 backdrop-blur-xl border-b border-gold/20"
         >
           <div className="container mx-auto px-4 py-4 space-y-4">
-            <Link href="/dashboard" passHref>
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-silver hover:text-gold"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Dashboard
-              </Button>
-            </Link>
-
             <div className="space-y-2">
               <h3 className="text-gold font-medium px-3">Tools</h3>
               <div className="space-y-1 pl-3">
@@ -181,7 +201,7 @@ export function Header() {
                   <Link
                     key={tool.name}
                     href={tool.href}
-                    className="block py-2 px-3 text-silver hover:text-gold rounded-md hover:bg-gold/10"
+                    className="block py-2 px-3 text-white hover:text-gold rounded-md hover:bg-gold/10"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     {tool.name}
@@ -193,7 +213,7 @@ export function Header() {
             <Link href="/analytics" passHref>
               <Button
                 variant="ghost"
-                className="w-full justify-start text-silver hover:text-gold"
+                className="w-full justify-start text-white hover:text-gold"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Analytics
@@ -203,27 +223,33 @@ export function Header() {
             <Link href="/reports" passHref>
               <Button
                 variant="ghost"
-                className="w-full justify-start text-silver hover:text-gold"
+                className="w-full justify-start text-white hover:text-gold"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Reports
               </Button>
             </Link>
 
-            <Link href="/settings" passHref>
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-silver hover:text-gold"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Settings
-              </Button>
-            </Link>
+            <div className="space-y-2">
+              <h3 className="text-gold font-medium px-3">Resources</h3>
+              <div className="space-y-1 pl-3">
+                {resources.map((resource) => (
+                  <Link
+                    key={resource.name}
+                    href={resource.href}
+                    className="block py-2 px-3 text-white hover:text-gold rounded-md hover:bg-gold/10"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    {resource.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
 
             <div className="pt-4 border-t border-gold/20 flex flex-col space-y-3">
               {user ? (
                 <Link href="/dashboard" passHref>
-                  <Button className="w-full gold-shimmer text-navy font-semibold">My Dashboard</Button>
+                  <Button className="w-full gold-shimmer text-navy font-semibold">Dashboard</Button>
                 </Link>
               ) : (
                 <>

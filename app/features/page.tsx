@@ -1,92 +1,107 @@
 "use client"
 
-import { AppSidebar } from "@/components/app-sidebar"
-import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
-import { Button } from "@/components/ui/button"
+import { CheckCircle, Search, Shield, Zap, BarChart3, Users, Globe, Settings } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Header } from "@/components/header"
 import { DoubleFooter } from "@/components/double-footer"
-import { BarChart3, Zap, Shield, Globe, CheckCircle, ArrowRight } from "lucide-react"
-import Link from "next/link"
+import { Badge } from "@/components/ui/badge"
 
 export default function FeaturesPage() {
   const features = [
     {
-      icon: <BarChart3 className="h-12 w-12 text-blue-500" />,
-      title: "SEO Analysis",
-      description: "Comprehensive SEO audit with actionable recommendations to improve your search rankings.",
+      icon: <Search className="w-8 h-8 text-gold" />,
+      title: "AI-Powered Analysis",
+      description: "Advanced machine learning algorithms analyze your website across multiple dimensions.",
       features: [
-        "Keyword analysis and optimization",
-        "Meta tags and descriptions review",
-        "Content optimization suggestions",
-        "Technical SEO audit",
-        "Competitor analysis",
+        "Intelligent content analysis",
+        "Automated recommendation engine",
+        "Pattern recognition and insights",
+        "Predictive performance metrics",
       ],
     },
     {
-      icon: <Zap className="h-12 w-12 text-yellow-500" />,
-      title: "Performance Testing",
-      description: "Core Web Vitals and speed optimization insights to make your website lightning fast.",
+      icon: <Zap className="w-8 h-8 text-gold" />,
+      title: "Performance Optimization", 
+      description: "Comprehensive speed and performance analysis with actionable recommendations.",
       features: [
         "Core Web Vitals monitoring",
-        "Page speed analysis",
-        "Image optimization recommendations",
-        "Code splitting suggestions",
-        "CDN optimization",
+        "Page speed optimization",
+        "Resource loading analysis", 
+        "Mobile performance insights",
       ],
     },
     {
-      icon: <Shield className="h-12 w-12 text-green-500" />,
-      title: "Security Scan",
-      description: "Vulnerability detection and security best practices to keep your website safe.",
+      icon: <Shield className="w-8 h-8 text-gold" />,
+      title: "Security & Compliance",
+      description: "Advanced security scanning and compliance checking for your website.",
       features: [
-        "Malware detection",
-        "SSL certificate validation",
+        "Vulnerability assessment",
+        "SSL certificate monitoring",
+        "GDPR compliance checks",
         "Security headers analysis",
-        "Vulnerability scanning",
-        "Security best practices",
       ],
     },
     {
-      icon: <Globe className="h-12 w-12 text-purple-500" />,
-      title: "UX Evaluation",
-      description: "User experience analysis and accessibility checks for a better visitor experience.",
+      icon: <BarChart3 className="w-8 h-8 text-gold" />,
+      title: "Advanced Analytics",
+      description: "Deep insights into your website's performance and user experience.",
       features: [
-        "Accessibility compliance",
-        "Mobile responsiveness",
-        "User journey analysis",
-        "Conversion optimization",
-        "Design best practices",
+        "Real-time monitoring",
+        "Conversion tracking",
+        "User behavior analysis",
+        "Custom reporting dashboards",
+      ],
+    },
+    {
+      icon: <Users className="w-8 h-8 text-gold" />,
+      title: "User Experience Analysis",
+      description: "Comprehensive UX evaluation and accessibility testing.",
+      features: [
+        "Accessibility compliance (WCAG)",
+        "User journey mapping", 
+        "Mobile responsiveness testing",
+        "Navigation flow analysis",
+      ],
+    },
+    {
+      icon: <Globe className="w-8 h-8 text-gold" />,
+      title: "Multi-Site Management", 
+      description: "Manage and monitor multiple websites from a single dashboard.",
+      features: [
+        "Centralized dashboard",
+        "Bulk audit capabilities",
+        "Cross-site comparisons",
+        "Team collaboration tools",
       ],
     },
   ]
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-white/10 px-4">
-          <SidebarTrigger className="-ml-1" />
-          <div className="flex-1">
-            <h1 className="text-xl font-semibold text-white">Features</h1>
-          </div>
-        </header>
-
-        <div className="flex-1 overflow-auto">
-          <div className="space-y-8 p-6">
-            {/* Header */}
-            <div className="text-center space-y-4">
-              <h1 className="text-4xl font-bold text-white">Powerful Features</h1>
-              <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-                Everything you need to optimize your website for better performance, SEO, security, and user experience.
+    <div className="flex min-h-screen flex-col bg-background">
+      {/* Header */}
+      <Header />
+      
+      {/* Main Content */}
+      <main className="flex-1 pt-20 sm:pt-24 lg:pt-32">
+        <div className="section-padding">
+          <div className="container mx-auto">
+            {/* Page Header */}
+            <div className="text-center mb-12 max-w-4xl mx-auto">
+              <Badge className="mb-4 bg-gold/20 text-gold border-gold/30">Powerful Features</Badge>
+              <h1 className="text-4xl md:text-5xl font-bold shimmer-title mb-4">
+                Everything You Need to Optimize Your Website
+              </h1>
+              <p className="text-lg text-white mb-8">
+                Comprehensive tools and AI-powered insights to improve your website's performance, SEO, security, and user experience.
               </p>
             </div>
 
             {/* Features Grid */}
-            <div className="grid gap-8 md:grid-cols-2">
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 max-w-7xl mx-auto">
               {features.map((feature, index) => (
-                <Card key={index} className="glass-card border-white/10 overflow-hidden">
+                <Card key={index} className="glass-card border-gold/10 overflow-hidden hover-shadow h-full">
                   <CardHeader>
-                    <div className="mb-4 rounded-full bg-slate-800/50 p-4 w-fit">{feature.icon}</div>
+                    <div className="mb-4 p-4 rounded-full bg-gold/10 w-fit">{feature.icon}</div>
                     <CardTitle className="text-white text-2xl">{feature.title}</CardTitle>
                     <CardDescription className="text-gray-300 text-lg">{feature.description}</CardDescription>
                   </CardHeader>
@@ -94,7 +109,7 @@ export default function FeaturesPage() {
                     <ul className="space-y-3">
                       {feature.features.map((item, i) => (
                         <li key={i} className="flex items-center">
-                          <CheckCircle className="mr-3 h-5 w-5 text-blue-500 flex-shrink-0" />
+                          <CheckCircle className="mr-3 h-5 w-5 text-gold flex-shrink-0" />
                           <span className="text-gray-300">{item}</span>
                         </li>
                       ))}
@@ -105,25 +120,38 @@ export default function FeaturesPage() {
             </div>
 
             {/* CTA Section */}
-            <Card className="glass-card border-white/10 bg-gradient-to-r from-blue-600/20 to-purple-600/20">
-              <CardContent className="p-8 text-center">
-                <h2 className="text-2xl font-bold text-white mb-4">Ready to Get Started?</h2>
-                <p className="text-gray-300 mb-6">
-                  Try all these features with our 14-day free trial. No credit card required.
-                </p>
-                <Link href="/signup">
-                  <Button className="shimmer text-white font-semibold">
-                    Start Free Trial
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
+            <div className="mt-16 text-center">
+              <Card className="glass-card border-gold/20 bg-gradient-to-br from-gold/5 to-transparent max-w-4xl mx-auto">
+                <CardContent className="p-12">
+                  <h2 className="text-3xl font-bold text-white mb-4">
+                    Ready to Optimize Your Website?
+                  </h2>
+                  <p className="text-gray-300 text-lg mb-8 max-w-2xl mx-auto">
+                    Join thousands of businesses that have improved their digital presence with AutomatIQ.AI
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <a
+                      href="/signup"
+                      className="inline-flex items-center justify-center px-8 py-3 bg-gold hover:bg-gold/90 text-navy font-semibold rounded-lg transition-colors"
+                    >
+                      Start Free Trial
+                    </a>
+                    <a
+                      href="/demo"
+                      className="inline-flex items-center justify-center px-8 py-3 border border-gold/30 text-gold hover:bg-gold/10 font-semibold rounded-lg transition-colors"
+                    >
+                      Watch Demo
+                    </a>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-
-          <DoubleFooter />
         </div>
-      </SidebarInset>
+      </main>
+      
+      {/* Footer */}
+      <DoubleFooter />
     </div>
   )
 }

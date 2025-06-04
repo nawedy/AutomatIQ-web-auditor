@@ -1,29 +1,57 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { AuthService } from "@/lib/auth"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth-config"
+import { prisma } from "@/lib/db"
 
+/**
+ * GET /api/auth/me
+ * Get the current authenticated user's profile
+ */
 export async function GET(request: NextRequest) {
   try {
-    const token =
-      request.cookies.get("auth_token")?.value || request.headers.get("authorization")?.replace("Bearer ", "")
-
-    if (!token) {
-      return NextResponse.json({ error: "No token provided" }, { status: 401 })
+    // Get the authenticated user from the session
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const user = await AuthService.getUserFromToken(token)
+    // Get user details from database
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        image: true,
+        emailVerified: true,
+        createdAt: true,
+        websites: {
+          select: {
+            id: true,
+          },
+          take: 1,
+        },
+      },
+    })
 
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
+    // Format the response
     return NextResponse.json({
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role,
-        subscription: user.subscription,
-        avatar_url: user.avatar_url,
+        image: user.image,
+        emailVerified: user.emailVerified,
+        createdAt: user.createdAt,
+        websiteCount: user.websites.length,
       },
     })
   } catch (error) {
-    console.error("Auth verification error:", error)
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    console.error("Error getting user profile:", error)
+    return NextResponse.json({ error: "Failed to get user profile" }, { status: 500 })
   }
 }

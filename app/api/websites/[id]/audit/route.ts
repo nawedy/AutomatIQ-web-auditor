@@ -1,93 +1,111 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { auditQueries, websiteQueries, notificationQueries } from "@/lib/database"
+import { prisma } from "@/lib/db"
+import { withAuth } from "@/lib/auth-utils"
+import { PrismaAuditService } from "@/lib/services/prisma-audit-service"
+import { z } from "zod"
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+// Request body schema
+const auditOptionsSchema = z.object({
+  seo: z.boolean().default(true),
+  performance: z.boolean().default(true),
+  accessibility: z.boolean().default(true),
+  bestPractices: z.boolean().default(true),
+  mobile: z.boolean().default(true),
+  security: z.boolean().default(true),
+});
+
+/**
+ * POST /api/websites/[id]/audit
+ * Start a new audit for a website
+ */
+export const POST = withAuth(async (
+  request: NextRequest, 
+  { params }: { params: { id: string } },
+  user: { id: string; email: string }
+) => {
   try {
-    const userId = "mock-user-id" // Replace with actual user ID from token
+    const websiteId = params.id;
+    
+    // Parse and validate request body
+    const body = await request.json().catch(() => ({}));
+    const { success, data: options } = auditOptionsSchema.safeParse(body);
+    
+    if (!success) {
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    }
 
-    // Check if website exists
-    const website = await websiteQueries.findById(params.id)
+    // Check if website exists and belongs to the user
+    const website = await prisma.website.findFirst({
+      where: {
+        id: websiteId,
+        userId: user.id,
+      },
+    });
+
     if (!website) {
-      return NextResponse.json({ error: "Website not found" }, { status: 404 })
+      return NextResponse.json({ error: "Website not found" }, { status: 404 });
     }
 
-    // Create new audit
-    const audit = await auditQueries.create({
-      website_id: params.id,
-      user_id: userId,
-      status: "queued",
-    })
+    // Initialize audit service
+    const auditService = new PrismaAuditService();
+    
+    // Start audit
+    const auditId = await auditService.startAudit(websiteId, options);
 
-    // Start audit process (in background)
-    processAudit(audit.id, website.url, userId)
-
-    return NextResponse.json({ audit }, { status: 201 })
+    return NextResponse.json({ 
+      auditId,
+      message: "Audit started successfully",
+      status: "pending"
+    }, { status: 201 });
   } catch (error) {
-    console.error("Error starting audit:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("Error starting audit:", error);
+    return NextResponse.json({ 
+      error: "Failed to start audit", 
+      message: error instanceof Error ? error.message : "Unknown error" 
+    }, { status: 500 });
   }
-}
+});
 
-async function processAudit(auditId: string, url: string, userId: string) {
+/**
+ * GET /api/websites/[id]/audit
+ * Get all audits for a website
+ */
+export const GET = withAuth(async (
+  request: NextRequest, 
+  { params }: { params: { id: string } },
+  user: { id: string; email: string }
+) => {
   try {
-    // Update status to running
-    await auditQueries.updateStatus(auditId, "running")
+    const websiteId = params.id;
 
-    // Simulate audit process
-    await new Promise((resolve) => setTimeout(resolve, 5000))
+    // Check if website exists and belongs to the user
+    const website = await prisma.website.findFirst({
+      where: {
+        id: websiteId,
+        userId: user.id,
+      },
+    });
 
-    // Generate mock results
-    const results = {
-      overall_score: Math.floor(Math.random() * 40) + 60,
-      seo_score: Math.floor(Math.random() * 40) + 60,
-      performance_score: Math.floor(Math.random() * 40) + 60,
-      security_score: Math.floor(Math.random() * 40) + 60,
-      ux_score: Math.floor(Math.random() * 40) + 60,
-      issues_critical: Math.floor(Math.random() * 5),
-      issues_warning: Math.floor(Math.random() * 10),
-      issues_info: Math.floor(Math.random() * 15),
-      metrics: {
-        first_contentful_paint: (Math.random() * 2 + 0.5).toFixed(1),
-        largest_contentful_paint: (Math.random() * 3 + 1).toFixed(1),
-        cumulative_layout_shift: (Math.random() * 0.3).toFixed(3),
-        first_input_delay: Math.floor(Math.random() * 100 + 20),
-      },
-      recommendations: {
-        performance: ["Optimize images", "Minify CSS and JavaScript"],
-        seo: ["Add meta descriptions", "Improve heading structure"],
-        security: ["Enable HTTPS", "Update dependencies"],
-      },
+    if (!website) {
+      return NextResponse.json({ error: "Website not found" }, { status: 404 });
     }
 
-    // Update audit with results
-    await auditQueries.updateStatus(auditId, "completed", results)
+    // Get all audits for this website
+    const audits = await prisma.audit.findMany({
+      where: {
+        websiteId,
+      },
+      include: {
+        summary: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
 
-    // Create notification
-    await notificationQueries.create({
-      user_id: userId,
-      audit_id: auditId,
-      type: "audit_complete",
-      title: "Audit Completed",
-      message: `Website audit completed with score: ${results.overall_score}`,
-      priority: "medium",
-      action_url: `/reports/${auditId}`,
-    })
+    return NextResponse.json({ audits });
   } catch (error) {
-    console.error("Error processing audit:", error)
-
-    // Mark audit as failed
-    await auditQueries.updateStatus(auditId, "failed", {
-      error_message: "Audit processing failed",
-    })
-
-    // Create error notification
-    await notificationQueries.create({
-      user_id: userId,
-      audit_id: auditId,
-      type: "system",
-      title: "Audit Failed",
-      message: "Website audit failed to complete",
-      priority: "high",
-    })
+    console.error("Error fetching website audits:", error);
+    return NextResponse.json({ error: "Failed to fetch website audits" }, { status: 500 });
   }
-}
+});

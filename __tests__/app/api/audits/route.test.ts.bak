@@ -1,0 +1,287 @@
+// __tests__/app/api/audits/route.test.ts
+// Tests for the audits API routes
+
+import { NextRequest } from 'next/server';
+import { GET, POST } from '@/app/api/audits/route';
+import { prisma } from '@/lib/db';
+import { PrismaAuditService } from '@/lib/services/prisma-audit-service';
+
+// Mock dependencies
+jest.mock('@/lib/db', () => ({
+  prisma: {
+    audit: {
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+    website: {
+      findUnique: jest.fn(),
+    },
+  },
+}));
+
+jest.mock('@/lib/services/prisma-audit-service', () => ({
+  PrismaAuditService: jest.fn().mockImplementation(() => ({
+    startAudit: jest.fn(),
+  })),
+}));
+
+jest.mock('@/lib/auth-utils', () => ({
+  withAuth: (handler: Function) => {
+    return async (request: NextRequest, context: any, user: any) => {
+      // This simulates the withAuth middleware by directly calling the handler
+      // with the authenticated user
+      return handler(request, context, user);
+    };
+  },
+}));
+
+describe('Audits API Routes', () => {
+  const mockUser = { id: 'user-123', email: 'user@example.com' };
+  const mockWebsiteId = 'website-123';
+  const mockAuditId = 'audit-123';
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('GET /api/audits', () => {
+    it('should return audits for the authenticated user', async () => {
+      // Mock data
+      const mockAudits = [
+        {
+          id: mockAuditId,
+          websiteId: mockWebsiteId,
+          status: 'completed',
+          website: { name: 'Example Website' },
+          summary: { overallScore: 85 },
+        },
+      ];
+
+      // Mock dependencies
+      (prisma.audit.findMany as jest.Mock).mockResolvedValue(mockAudits);
+
+      // Create mock request
+      const request = new NextRequest('http://localhost:3000/api/audits');
+
+      // Execute
+      const response = await GET(request, {}, mockUser);
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(data).toEqual({ audits: mockAudits });
+      expect(prisma.audit.findMany).toHaveBeenCalledWith({
+        where: {
+          website: {
+            userId: mockUser.id,
+          },
+        },
+        include: {
+          website: true,
+          summary: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+    });
+
+    it('should filter audits by websiteId if provided', async () => {
+      // Mock data
+      const mockAudits = [
+        {
+          id: mockAuditId,
+          websiteId: mockWebsiteId,
+          status: 'completed',
+          website: { name: 'Example Website' },
+          summary: { overallScore: 85 },
+        },
+      ];
+
+      // Mock dependencies
+      (prisma.audit.findMany as jest.Mock).mockResolvedValue(mockAudits);
+
+      // Create mock request with websiteId query param
+      const request = new NextRequest(`http://localhost:3000/api/audits?websiteId=${mockWebsiteId}`);
+
+      // Execute
+      const response = await GET(request, {}, mockUser);
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(data).toEqual({ audits: mockAudits });
+      expect(prisma.audit.findMany).toHaveBeenCalledWith({
+        where: {
+          website: {
+            userId: mockUser.id,
+            id: mockWebsiteId,
+          },
+        },
+        include: {
+          website: true,
+          summary: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+    });
+
+    it('should handle errors gracefully', async () => {
+      // Mock dependencies to throw error
+      (prisma.audit.findMany as jest.Mock).mockRejectedValue(new Error('Database error'));
+
+      // Create mock request
+      const request = new NextRequest('http://localhost:3000/api/audits');
+
+      // Execute
+      const response = await GET(request, {}, mockUser);
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(500);
+      expect(data).toEqual({ error: 'Failed to fetch audits' });
+    });
+  });
+
+  describe('POST /api/audits', () => {
+    const validRequestBody = {
+      websiteId: mockWebsiteId,
+      url: 'https://example.com',
+      options: {
+        seo: true,
+        performance: true,
+        accessibility: true,
+        security: false,
+        bestPractices: true,
+        mobileUx: false,
+        content: true,
+      },
+    };
+
+    it('should create a new audit successfully', async () => {
+      // Mock data
+      const mockAudit = {
+        id: mockAuditId,
+        websiteId: mockWebsiteId,
+        status: 'pending',
+      };
+
+      // Mock dependencies
+      (prisma.website.findUnique as jest.Mock).mockResolvedValue({
+        id: mockWebsiteId,
+        userId: mockUser.id,
+      });
+      (prisma.audit.create as jest.Mock).mockResolvedValue(mockAudit);
+      const mockAuditService = new PrismaAuditService();
+      (mockAuditService.startAudit as jest.Mock).mockResolvedValue(mockAuditId);
+
+      // Create mock request
+      const request = new NextRequest('http://localhost:3000/api/audits', {
+        method: 'POST',
+        body: JSON.stringify(validRequestBody),
+      });
+
+      // Execute
+      const response = await POST(request, {}, mockUser);
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(201);
+      expect(data).toEqual({ audit: mockAudit });
+      expect(prisma.website.findUnique).toHaveBeenCalledWith({
+        where: {
+          id: mockWebsiteId,
+          userId: mockUser.id,
+        },
+      });
+      expect(prisma.audit.create).toHaveBeenCalledWith({
+        data: {
+          websiteId: mockWebsiteId,
+          status: 'pending',
+        },
+      });
+      expect(mockAuditService.startAudit).toHaveBeenCalledWith(
+        mockWebsiteId,
+        expect.objectContaining({
+          seo: true,
+          performance: true,
+          accessibility: true,
+          security: false,
+          bestPractices: true,
+          mobile: false,
+          content: true,
+        })
+      );
+    });
+
+    it('should return 400 for invalid request data', async () => {
+      // Create mock request with invalid data (missing url)
+      const invalidRequestBody = {
+        websiteId: mockWebsiteId,
+        // Missing url field
+        options: {
+          seo: true,
+        },
+      };
+
+      const request = new NextRequest('http://localhost:3000/api/audits', {
+        method: 'POST',
+        body: JSON.stringify(invalidRequestBody),
+      });
+
+      // Execute
+      const response = await POST(request, {}, mockUser);
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(400);
+      expect(data).toHaveProperty('error', 'Invalid request data');
+      expect(data).toHaveProperty('details');
+    });
+
+    it('should return 404 if website not found or not owned by user', async () => {
+      // Mock dependencies
+      (prisma.website.findUnique as jest.Mock).mockResolvedValue(null);
+
+      // Create mock request
+      const request = new NextRequest('http://localhost:3000/api/audits', {
+        method: 'POST',
+        body: JSON.stringify(validRequestBody),
+      });
+
+      // Execute
+      const response = await POST(request, {}, mockUser);
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(404);
+      expect(data).toEqual({ error: 'Website not found or not owned by user' });
+    });
+
+    it('should handle errors gracefully', async () => {
+      // Mock dependencies to throw error
+      (prisma.website.findUnique as jest.Mock).mockResolvedValue({
+        id: mockWebsiteId,
+        userId: mockUser.id,
+      });
+      (prisma.audit.create as jest.Mock).mockRejectedValue(new Error('Database error'));
+
+      // Create mock request
+      const request = new NextRequest('http://localhost:3000/api/audits', {
+        method: 'POST',
+        body: JSON.stringify(validRequestBody),
+      });
+
+      // Execute
+      const response = await POST(request, {}, mockUser);
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(500);
+      expect(data).toEqual({ error: 'Failed to create audit' });
+    });
+  });
+});

@@ -10,7 +10,8 @@ export interface AuditOptions {
   accessibility: boolean
   security: boolean
   mobile: boolean
-  content: boolean
+  content?: boolean
+  bestPractices?: boolean
 }
 
 export interface AuditProgress {

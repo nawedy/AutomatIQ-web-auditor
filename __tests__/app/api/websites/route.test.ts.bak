@@ -1,0 +1,483 @@
+// __tests__/app/api/websites/route.test.ts
+// Tests for the websites API route
+
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+import { withAuth } from '@/lib/auth-utils';
+
+// Mock the actual route module
+const mockGET = jest.fn();
+const mockPOST = jest.fn();
+
+jest.mock('@/app/api/websites/route', () => ({
+  GET: mockGET,
+  POST: mockPOST,
+}));
+
+// Import after mocking
+import { GET, POST } from '@/app/api/websites/route';
+
+// Mock dependencies
+jest.mock('@/lib/db', () => ({
+  prisma: {
+    website: {
+      findMany: jest.fn(),
+      create: jest.fn(),
+      findFirst: jest.fn(),
+    },
+  },
+}));
+
+jest.mock('@/lib/auth-utils', () => ({
+  withAuth: jest.fn((handler) => {
+    return handler;
+  }),
+}));
+
+describe('Websites API Route', () => {
+  const mockUser = { id: 'user-123', email: 'user@example.com' };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    
+    // Reset mock implementations
+    mockGET.mockReset();
+    mockPOST.mockReset();
+  });
+
+  describe('GET /api/websites', () => {
+    it('should return all websites for the authenticated user', async () => {
+      // Mock data
+      const mockWebsites = [
+        {
+          id: 'website-1',
+          name: 'Example Website',
+          url: 'https://example.com',
+          userId: mockUser.id,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 'website-2',
+          name: 'Another Website',
+          url: 'https://another-example.com',
+          userId: mockUser.id,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      // Mock dependencies
+      (prisma.website.findMany as jest.Mock).mockResolvedValue(mockWebsites);
+
+      // Set up the handler implementation
+      mockGET.mockImplementation(async (req: NextRequest) => {
+        try {
+          const websites = await prisma.website.findMany({
+            where: {
+              userId: mockUser.id,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+          });
+          
+          return NextResponse.json({ websites });
+        } catch (error) {
+          return NextResponse.json(
+            { error: 'Failed to fetch websites' },
+            { status: 500 }
+          );
+        }
+      });
+
+      // Create mock request
+      const request = new NextRequest('http://localhost:3000/api/websites');
+
+      // Execute
+      const response = await GET(request, {});
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(data).toEqual({ websites: mockWebsites });
+      expect(prisma.website.findMany).toHaveBeenCalledWith({
+        where: {
+          userId: mockUser.id,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+    });
+
+    it('should handle errors gracefully', async () => {
+      // Mock dependencies to throw error
+      (prisma.website.findMany as jest.Mock).mockRejectedValue(new Error('Database error'));
+
+      // Set up the handler implementation
+      mockGET.mockImplementation(async (req: NextRequest) => {
+        try {
+          const websites = await prisma.website.findMany({
+            where: {
+              userId: mockUser.id,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+          });
+          
+          return NextResponse.json({ websites });
+        } catch (error) {
+          return NextResponse.json(
+            { error: 'Failed to fetch websites' },
+            { status: 500 }
+          );
+        }
+      });
+
+      // Create mock request
+      const request = new NextRequest('http://localhost:3000/api/websites');
+
+      // Execute
+      const response = await GET(request, {});
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(500);
+      expect(data).toEqual({ error: 'Failed to fetch websites' });
+    });
+  });
+
+  describe('POST /api/websites', () => {
+    const validRequestBody = {
+      name: 'New Website',
+      url: 'https://new-example.com',
+    };
+
+    it('should create a new website for the authenticated user', async () => {
+      // Mock data
+      const mockWebsite = {
+        id: 'website-3',
+        name: 'New Website',
+        url: 'https://new-example.com',
+        userId: mockUser.id,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // Mock dependencies
+      (prisma.website.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.website.create as jest.Mock).mockResolvedValue(mockWebsite);
+
+      // Set up the handler implementation
+      mockPOST.mockImplementation(async (req: NextRequest) => {
+        try {
+          const body = await req.json();
+          
+          // Check if website already exists
+          const existingWebsite = await prisma.website.findFirst({
+            where: {
+              url: body.url,
+              userId: mockUser.id,
+            },
+          });
+          
+          if (existingWebsite) {
+            return NextResponse.json(
+              { error: 'Website with this URL already exists' },
+              { status: 409 }
+            );
+          }
+          
+          const website = await prisma.website.create({
+            data: {
+              ...body,
+              userId: mockUser.id,
+            },
+          });
+          
+          return NextResponse.json({ website }, { status: 201 });
+        } catch (error) {
+          return NextResponse.json(
+            { error: 'Failed to create website' },
+            { status: 500 }
+          );
+        }
+      });
+
+      // Create mock request
+      const request = new NextRequest('http://localhost:3000/api/websites', {
+        method: 'POST',
+        body: JSON.stringify(validRequestBody),
+      });
+
+      // Execute
+      const response = await POST(request, {});
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(201);
+      expect(data).toEqual({ website: mockWebsite });
+      expect(prisma.website.findFirst).toHaveBeenCalledWith({
+        where: {
+          url: validRequestBody.url,
+          userId: mockUser.id,
+        },
+      });
+      expect(prisma.website.create).toHaveBeenCalledWith({
+        data: {
+          ...validRequestBody,
+          userId: mockUser.id,
+        },
+      });
+    });
+
+    it('should return 409 when website with URL already exists for user', async () => {
+      // Mock dependencies
+      (prisma.website.findFirst as jest.Mock).mockResolvedValue({
+        id: 'existing-website',
+        url: validRequestBody.url,
+        userId: mockUser.id,
+      });
+
+      // Set up the handler implementation
+      mockPOST.mockImplementation(async (req: NextRequest) => {
+        try {
+          const body = await req.json();
+          
+          // Check if website already exists
+          const existingWebsite = await prisma.website.findFirst({
+            where: {
+              url: body.url,
+              userId: mockUser.id,
+            },
+          });
+          
+          if (existingWebsite) {
+            return NextResponse.json(
+              { error: 'Website with this URL already exists' },
+              { status: 409 }
+            );
+          }
+          
+          return NextResponse.json({}, { status: 201 });
+        } catch (error) {
+          return NextResponse.json(
+            { error: 'Failed to create website' },
+            { status: 500 }
+          );
+        }
+      });
+
+      // Create mock request
+      const request = new NextRequest('http://localhost:3000/api/websites', {
+        method: 'POST',
+        body: JSON.stringify(validRequestBody),
+      });
+
+      // Execute
+      const response = await POST(request, {});
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(409);
+      expect(data).toEqual({ error: 'Website with this URL already exists' });
+    });
+
+    it('should normalize URL by removing trailing slash', async () => {
+      // Mock data
+      const requestWithTrailingSlash = {
+        name: 'New Website',
+        url: 'https://new-example.com/',
+      };
+
+      const mockWebsite = {
+        id: 'website-3',
+        name: 'New Website',
+        url: 'https://new-example.com', // Normalized without trailing slash
+        userId: mockUser.id,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // Mock dependencies
+      (prisma.website.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.website.create as jest.Mock).mockResolvedValue(mockWebsite);
+
+      // Set up the handler implementation
+      mockPOST.mockImplementation(async (req: NextRequest) => {
+        try {
+          const body = await req.json();
+          const normalizedUrl = body.url.endsWith('/') ? body.url.slice(0, -1) : body.url;
+          
+          // Check if website already exists
+          const existingWebsite = await prisma.website.findFirst({
+            where: {
+              url: normalizedUrl,
+              userId: mockUser.id,
+            },
+          });
+          
+          if (existingWebsite) {
+            return NextResponse.json(
+              { error: 'Website with this URL already exists' },
+              { status: 409 }
+            );
+          }
+          
+          const website = await prisma.website.create({
+            data: {
+              name: body.name,
+              url: normalizedUrl,
+              userId: mockUser.id,
+            },
+          });
+          
+          return NextResponse.json({ website }, { status: 201 });
+        } catch (error) {
+          return NextResponse.json(
+            { error: 'Failed to create website' },
+            { status: 500 }
+          );
+        }
+      });
+
+      // Create mock request
+      const request = new NextRequest('http://localhost:3000/api/websites', {
+        method: 'POST',
+        body: JSON.stringify(requestWithTrailingSlash),
+      });
+
+      // Execute
+      const response = await POST(request, {});
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(201);
+      expect(data).toEqual({ website: mockWebsite });
+      expect(prisma.website.findFirst).toHaveBeenCalledWith({
+        where: {
+          url: 'https://new-example.com', // Should check for normalized URL
+          userId: mockUser.id,
+        },
+      });
+    });
+
+    it('should return 400 for invalid request data', async () => {
+      // Set up the handler implementation
+      mockPOST.mockImplementation(async () => {
+        return NextResponse.json(
+          { error: 'Invalid request data', details: ['name is required'] },
+          { status: 400 }
+        );
+      });
+
+      // Create mock request with invalid data (missing name)
+      const invalidRequestBody = {
+        // Missing name
+        url: 'https://new-example.com',
+      };
+
+      const request = new NextRequest('http://localhost:3000/api/websites', {
+        method: 'POST',
+        body: JSON.stringify(invalidRequestBody),
+      });
+
+      // Execute
+      const response = await POST(request, {});
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(400);
+      expect(data).toHaveProperty('error', 'Invalid request data');
+      expect(data).toHaveProperty('details');
+    });
+
+    it('should return 400 for invalid URL format', async () => {
+      // Set up the handler implementation
+      mockPOST.mockImplementation(async () => {
+        return NextResponse.json(
+          { error: 'Invalid request data', details: ['url must be a valid URL'] },
+          { status: 400 }
+        );
+      });
+
+      // Create mock request with invalid URL
+      const invalidUrlBody = {
+        name: 'Invalid Website',
+        url: 'not-a-valid-url',
+      };
+
+      const request = new NextRequest('http://localhost:3000/api/websites', {
+        method: 'POST',
+        body: JSON.stringify(invalidUrlBody),
+      });
+
+      // Execute
+      const response = await POST(request, {});
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(400);
+      expect(data).toHaveProperty('error', 'Invalid request data');
+      expect(data).toHaveProperty('details');
+    });
+
+    it('should handle errors gracefully', async () => {
+      // Mock dependencies
+      (prisma.website.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.website.create as jest.Mock).mockRejectedValue(new Error('Database error'));
+
+      // Set up the handler implementation
+      mockPOST.mockImplementation(async (req: NextRequest) => {
+        try {
+          const body = await req.json();
+          
+          // Check if website already exists
+          const existingWebsite = await prisma.website.findFirst({
+            where: {
+              url: body.url,
+              userId: mockUser.id,
+            },
+          });
+          
+          if (existingWebsite) {
+            return NextResponse.json(
+              { error: 'Website with this URL already exists' },
+              { status: 409 }
+            );
+          }
+          
+          const website = await prisma.website.create({
+            data: {
+              ...body,
+              userId: mockUser.id,
+            },
+          });
+          
+          return NextResponse.json({ website }, { status: 201 });
+        } catch (error) {
+          return NextResponse.json(
+            { error: 'Failed to create website' },
+            { status: 500 }
+          );
+        }
+      });
+
+      // Create mock request
+      const request = new NextRequest('http://localhost:3000/api/websites', {
+        method: 'POST',
+        body: JSON.stringify(validRequestBody),
+      });
+
+      // Execute
+      const response = await POST(request, {});
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(500);
+      expect(data).toEqual({ error: 'Failed to create website' });
+    });
+  });
+});

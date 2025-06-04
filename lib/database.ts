@@ -1,6 +1,4 @@
-import { neon } from "@neondatabase/serverless"
-
-const sql = neon(process.env.DATABASE_URL!)
+import { prisma, executeRawQuery, setCurrentUserId } from "./db"
 
 // User operations
 export const userQueries = {

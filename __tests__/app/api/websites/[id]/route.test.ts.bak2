@@ -1,0 +1,332 @@
+// __tests__/app/api/websites/[id]/route.test.ts
+// Tests for the specific website API route
+
+// Import common mocks
+import '../../../../setup/next-mocks';
+import { mockUser } from '../../../../setup/next-mocks';
+import { NextRequest } from 'next/server';
+import { GET, PUT, DELETE } from '@/app/api/websites/[id]/route';
+import { prisma } from '@/lib/db';
+
+describe('Specific Website API Route', () => {
+  const mockWebsiteId = 'website-123';
+  const mockParams = { id: mockWebsiteId };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Silence console.error during tests
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+  
+  afterEach(() => {
+    (console.error as jest.Mock).mockRestore();
+  });
+
+  describe('GET /api/websites/[id]', () => {
+    it('should return the website with its audits', async () => {
+      // Mock data
+      const mockWebsite = {
+        id: mockWebsiteId,
+        name: 'Example Website',
+        url: 'https://example.com',
+        userId: mockUser.id,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const mockAudits = [
+        {
+          id: 'audit-1',
+          websiteId: mockWebsiteId,
+          status: 'completed',
+          createdAt: new Date(),
+          completedAt: new Date(),
+        },
+        {
+          id: 'audit-2',
+          websiteId: mockWebsiteId,
+          status: 'running',
+          createdAt: new Date(),
+          completedAt: null,
+        },
+      ];
+
+      // Mock dependencies
+      (prisma.website.findFirst as jest.Mock).mockResolvedValue(mockWebsite);
+      (prisma.audit.findMany as jest.Mock).mockResolvedValue(mockAudits);
+
+      // Create mock request
+      const request = new NextRequest(`http://localhost:3000/api/websites/${mockWebsiteId}`);
+
+      // Execute
+      const response = await GET(request, { params: mockParams });
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(data).toEqual({
+        website: mockWebsite,
+        audits: mockAudits,
+      });
+      expect(prisma.website.findFirst).toHaveBeenCalledWith({
+        where: {
+          id: mockWebsiteId,
+          userId: mockUser.id,
+        },
+      });
+      expect(prisma.audit.findMany).toHaveBeenCalledWith({
+        where: {
+          websiteId: mockWebsiteId,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+    });
+
+    it('should return 404 if website not found', async () => {
+      // Mock dependencies
+      (prisma.website.findFirst as jest.Mock).mockResolvedValue(null);
+
+      // Create mock request
+      const request = new NextRequest(`http://localhost:3000/api/websites/${mockWebsiteId}`);
+
+      // Execute
+      const response = await GET(request, { params: mockParams });
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(404);
+      expect(data).toEqual({ error: 'Website not found' });
+    });
+
+    it('should handle errors gracefully', async () => {
+      // Mock dependencies to throw error
+      (prisma.website.findFirst as jest.Mock).mockRejectedValue(new Error('Database error'));
+
+      // Create mock request
+      const request = new NextRequest(`http://localhost:3000/api/websites/${mockWebsiteId}`);
+
+      // Execute
+      const response = await GET(request, { params: mockParams });
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(500);
+      expect(data).toEqual({ error: 'Failed to fetch website' });
+      expect(console.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('PUT /api/websites/[id]', () => {
+    const validRequestBody = {
+      name: 'Updated Website Name',
+      url: 'https://updated-example.com',
+    };
+
+    it('should update the website', async () => {
+      // Mock data
+      const mockExistingWebsite = {
+        id: mockWebsiteId,
+        name: 'Example Website',
+        url: 'https://example.com',
+        userId: mockUser.id,
+      };
+
+      const mockUpdatedWebsite = {
+        ...mockExistingWebsite,
+        ...validRequestBody,
+      };
+
+      // Mock dependencies
+      (prisma.website.findFirst as jest.Mock).mockResolvedValue(mockExistingWebsite);
+      (prisma.website.update as jest.Mock).mockResolvedValue(mockUpdatedWebsite);
+
+      // Create mock request
+      const request = new NextRequest(`http://localhost:3000/api/websites/${mockWebsiteId}`, {
+        method: 'PUT',
+        body: JSON.stringify(validRequestBody),
+      });
+      
+      // Mock request.json() method
+      request.json = jest.fn().mockResolvedValue(validRequestBody);
+
+      // Execute
+      const response = await PUT(request, { params: mockParams });
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(data).toEqual({ website: mockUpdatedWebsite });
+      expect(prisma.website.findFirst).toHaveBeenCalledWith({
+        where: {
+          id: mockWebsiteId,
+          userId: mockUser.id,
+        },
+      });
+      expect(prisma.website.update).toHaveBeenCalledWith({
+        where: { id: mockWebsiteId },
+        data: validRequestBody,
+      });
+    });
+
+    it('should return 404 if website not found', async () => {
+      // Mock dependencies
+      (prisma.website.findFirst as jest.Mock).mockResolvedValue(null);
+
+      // Create mock request
+      const request = new NextRequest(`http://localhost:3000/api/websites/${mockWebsiteId}`, {
+        method: 'PUT',
+        body: JSON.stringify(validRequestBody),
+      });
+      
+      // Mock request.json() method
+      request.json = jest.fn().mockResolvedValue(validRequestBody);
+
+      // Execute
+      const response = await PUT(request, { params: mockParams });
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(404);
+      expect(data).toEqual({ error: 'Website not found' });
+    });
+
+    it('should return 400 for invalid request data', async () => {
+      // Mock dependencies
+      (prisma.website.findFirst as jest.Mock).mockResolvedValue({
+        id: mockWebsiteId,
+        userId: mockUser.id,
+      });
+
+      // Create mock request with invalid data (missing name)
+      const invalidRequestBody = {
+        // Missing name
+        url: 'https://updated-example.com',
+      };
+
+      const request = new NextRequest(`http://localhost:3000/api/websites/${mockWebsiteId}`, {
+        method: 'PUT',
+        body: JSON.stringify(invalidRequestBody),
+      });
+      
+      // Mock request.json() method
+      request.json = jest.fn().mockResolvedValue(invalidRequestBody);
+
+      // Execute
+      const response = await PUT(request, { params: mockParams });
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(400);
+      expect(data).toHaveProperty('error', 'Invalid request data');
+      expect(data).toHaveProperty('details');
+    });
+
+    it('should handle errors gracefully', async () => {
+      // Mock dependencies
+      (prisma.website.findFirst as jest.Mock).mockResolvedValue({
+        id: mockWebsiteId,
+        userId: mockUser.id,
+      });
+      (prisma.website.update as jest.Mock).mockRejectedValue(new Error('Database error'));
+
+      // Create mock request
+      const request = new NextRequest(`http://localhost:3000/api/websites/${mockWebsiteId}`, {
+        method: 'PUT',
+        body: JSON.stringify(validRequestBody),
+      });
+      
+      // Mock request.json() method
+      request.json = jest.fn().mockResolvedValue(validRequestBody);
+
+      // Execute
+      const response = await PUT(request, { params: mockParams });
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(500);
+      expect(data).toEqual({ error: 'Failed to update website' });
+      expect(console.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('DELETE /api/websites/[id]', () => {
+    it('should delete the website', async () => {
+      // Mock data
+      const mockWebsite = {
+        id: mockWebsiteId,
+        name: 'Example Website',
+        url: 'https://example.com',
+        userId: mockUser.id,
+      };
+
+      // Mock dependencies
+      (prisma.website.findFirst as jest.Mock).mockResolvedValue(mockWebsite);
+      (prisma.website.delete as jest.Mock).mockResolvedValue(mockWebsite);
+
+      // Create mock request
+      const request = new NextRequest(`http://localhost:3000/api/websites/${mockWebsiteId}`, {
+        method: 'DELETE',
+      });
+
+      // Execute
+      const response = await DELETE(request, { params: mockParams });
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(data).toEqual({ message: 'Website deleted successfully' });
+      expect(prisma.website.findFirst).toHaveBeenCalledWith({
+        where: {
+          id: mockWebsiteId,
+          userId: mockUser.id,
+        },
+      });
+      expect(prisma.website.delete).toHaveBeenCalledWith({
+        where: { id: mockWebsiteId },
+      });
+    });
+
+    it('should return 404 if website not found', async () => {
+      // Mock dependencies
+      (prisma.website.findFirst as jest.Mock).mockResolvedValue(null);
+
+      // Create mock request
+      const request = new NextRequest(`http://localhost:3000/api/websites/${mockWebsiteId}`, {
+        method: 'DELETE',
+      });
+
+      // Execute
+      const response = await DELETE(request, { params: mockParams });
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(404);
+      expect(data).toEqual({ error: 'Website not found' });
+    });
+
+    it('should handle errors gracefully', async () => {
+      // Mock dependencies
+      (prisma.website.findFirst as jest.Mock).mockResolvedValue({
+        id: mockWebsiteId,
+        userId: mockUser.id,
+      });
+      (prisma.website.delete as jest.Mock).mockRejectedValue(new Error('Database error'));
+
+      // Create mock request
+      const request = new NextRequest(`http://localhost:3000/api/websites/${mockWebsiteId}`, {
+        method: 'DELETE',
+      });
+
+      // Execute
+      const response = await DELETE(request, { params: mockParams });
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(500);
+      expect(data).toEqual({ error: 'Failed to delete website' });
+      expect(console.error).toHaveBeenCalled();
+    });
+  });
+});

@@ -1,51 +1,97 @@
+// src/app/api/websites/route.ts
+// API routes for managing websites
+
 import { type NextRequest, NextResponse } from "next/server"
-import { websiteQueries } from "@/lib/database"
+import { prisma } from "@/lib/db"
+import { withAuth } from "@/lib/auth-utils"
+import { z } from "zod"
 
-export async function GET(request: NextRequest) {
+// Schema for website creation and update
+const websiteSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  url: z.string().url("Invalid URL format"),
+  description: z.string().optional(),
+  audit_frequency: z.enum(["daily", "weekly", "monthly"]).default("weekly"),
+  notifications: z.boolean().default(true),
+  tags: z.array(z.string()).default([]),
+})
+
+/**
+ * GET /api/websites
+ * Get all websites for the authenticated user
+ */
+export const GET = withAuth(async (request: NextRequest, context, user) => {
   try {
-    const userId = request.headers.get("x-user-id")
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    // Get all websites for the user with audit statistics
+    const websites = await prisma.website.findMany({
+      where: { userId: user.id },
+      include: {
+        audits: {
+          select: {
+            id: true,
+            createdAt: true,
+            status: true,
+            summary: true,
+          },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
+    })
 
-    const websites = await websiteQueries.findByUserId(userId)
-    return NextResponse.json({ websites })
+    // Format the response
+    const websitesWithStats = websites.map((website: any) => ({
+      id: website.id,
+      name: website.name,
+      url: website.url,
+      description: website.description,
+      audit_frequency: website.auditFrequency,
+      notifications: website.notifications,
+      tags: website.tags,
+      created_at: website.createdAt,
+      updated_at: website.updatedAt,
+      last_audit: website.audits[0] || null,
+      average_score: website.audits[0]?.summary?.overallScore || null,
+    }))
+
+    // Return the websites
+    return NextResponse.json({ websites: websitesWithStats })
   } catch (error) {
     console.error("Error fetching websites:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
-}
+})
 
-export async function POST(request: NextRequest) {
+/**
+ * POST /api/websites
+ * Create a new website for the authenticated user
+ */
+export const POST = withAuth(async (request: NextRequest, context, user) => {
   try {
-    const userId = request.headers.get("x-user-id")
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
+    // Parse and validate request body
     const body = await request.json()
-    const { name, url, description, audit_frequency, notifications, tags } = body
-
-    // Validate required fields
-    if (!name || !url) {
-      return NextResponse.json({ error: "Name and URL are required" }, { status: 400 })
+    const validationResult = websiteSchema.safeParse(body)
+    
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: "Invalid request data", details: validationResult.error.format() },
+        { status: 400 }
+      )
     }
 
-    // Validate URL format
-    try {
-      new URL(url)
-    } catch {
-      return NextResponse.json({ error: "Invalid URL format" }, { status: 400 })
-    }
+    const { name, url, description, audit_frequency, notifications, tags } = validationResult.data
 
-    const website = await websiteQueries.create({
-      user_id: userId,
-      name,
-      url,
-      description,
-      audit_frequency: audit_frequency || "weekly",
-      notifications: notifications ?? true,
-      tags: tags || [],
+    // Create the website
+    const website = await prisma.website.create({
+      data: {
+        userId: user.id,
+        name,
+        url,
+        description,
+        auditFrequency: audit_frequency,
+        notifications,
+        tags,
+      },
     })
 
     return NextResponse.json({ website }, { status: 201 })
@@ -53,4 +99,4 @@ export async function POST(request: NextRequest) {
     console.error("Error creating website:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
-}
+})

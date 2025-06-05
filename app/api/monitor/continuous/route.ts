@@ -6,8 +6,11 @@ import { withAuth } from '@/lib/auth-utils';
 import { withRateLimit } from '@/lib/rate-limit';
 import { PrismaClient } from '@prisma/client';
 import { subDays } from 'date-fns';
+import { MonitoringService } from '@/lib/services/monitoring-service';
 
 const prisma = new PrismaClient();
+// Initialize MonitoringService with the prisma instance for better testability
+const monitoringService = new MonitoringService(prisma);
 
 /**
  * GET handler for retrieving continuous monitoring data
@@ -97,17 +100,23 @@ export const GET = withRateLimit(
         }
       });
       
-      // Get alerts and issues
-      const alerts = await prisma.alert.findMany({
-        where: {
-          websiteId,
-          ...(Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {})
-        },
-        orderBy: {
-          createdAt: 'desc'
-        },
-        take: 10 // Limit to 10 most recent alerts
-      });
+      // Get alerts and issues using our service with caching
+      // Use a small page size since we only need the 10 most recent
+      const alerts = await monitoringService.getAlertsFromCacheOrDatabase(
+        websiteId,
+        1, // first page
+        10, // limit to 10
+        false // include read alerts
+      );
+      
+      // If we have a date filter, apply it to the results
+      const filteredAlerts = Object.keys(dateFilter).length > 0 
+        ? alerts.filter(alert => {
+            const alertDate = new Date(alert.createdAt);
+            const filterDate = dateFilter.gte;
+            return alertDate >= filterDate;
+          })
+        : alerts;
       
       // Calculate trends and changes
       let trends = {};
@@ -133,12 +142,8 @@ export const GET = withRateLimit(
         }, {});
       }
       
-      // Get monitoring configuration
-      const monitoringConfig = await prisma.monitoringConfig.findFirst({
-        where: {
-          websiteId
-        }
-      });
+      // Get monitoring configuration using our service with caching
+      const monitoringConfig = await monitoringService.getMonitoringConfig(websiteId);
       
       return NextResponse.json({
         websiteId,
@@ -146,7 +151,7 @@ export const GET = withRateLimit(
         websiteUrl: website.url,
         timeRange,
         auditHistory,
-        alerts,
+        alerts: filteredAlerts, // Use the filtered alerts instead of raw alerts
         trends,
         monitoringConfig: monitoringConfig || {
           enabled: false,

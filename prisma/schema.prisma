@@ -1,89 +1,82 @@
-// prisma/schema.prisma
-// Database schema for AutomatIQ Web Auditor
-
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["multiSchema"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-// User model for authentication and account management
 model User {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email         String    @unique
-  name          String?
-  password      String?   @db.VarChar(255)
-  emailVerified DateTime? @map("email_verified")
-  image         String?   @db.VarChar(1024)
-  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime  @default(now()) @map("updated_at") @db.Timestamptz
-  websites      Website[]
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email           String            @unique
+  name            String?
+  password        String?           @db.VarChar(255)
+  emailVerified   DateTime?         @map("email_verified")
+  image           String?           @db.VarChar(1024)
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime          @default(now()) @map("updated_at") @db.Timestamptz(6)
+  websites        Website[]
+  monitoringAlerts MonitoringAlert[]
 
   @@map("users")
 }
 
-// Website model to store information about websites being audited
 model Website {
-  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId           String           @map("user_id") @db.Uuid
-  url              String           @db.VarChar(2048)
-  name             String
-  monitoringEnabled Boolean          @default(false) @map("monitoring_enabled")
-  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime         @default(now()) @map("updated_at") @db.Timestamptz
-  audits           Audit[]
-  pages            Page[]
-  auditSchedule    AuditSchedule?
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String           @map("user_id") @db.Uuid
+  url             String           @db.VarChar(2048)
+  name            String
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
+  auditSchedule   AuditSchedule?
+  audits          Audit[]
+  pages           Page[]
   monitoringConfig MonitoringConfig?
-  alerts           Alert[]
-  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  monitoringChecks MonitoringCheck[]
+  monitoringAlerts MonitoringAlert[]
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, url])
   @@index([userId])
   @@map("websites")
 }
 
-// Audit model to store individual audit runs
 model Audit {
-  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  websiteId    String         @map("website_id") @db.Uuid
-  status       String         @default("pending") @db.VarChar(50)
-  startedAt    DateTime       @default(now()) @map("started_at") @db.Timestamptz
-  completedAt  DateTime?      @map("completed_at") @db.Timestamptz
-  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime       @default(now()) @map("updated_at") @db.Timestamptz
-  website      Website        @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  websiteId    String            @map("website_id") @db.Uuid
+  status       String            @default("pending") @db.VarChar(50)
+  startedAt    DateTime          @default(now()) @map("started_at") @db.Timestamptz(6)
+  completedAt  DateTime?         @map("completed_at") @db.Timestamptz(6)
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime          @default(now()) @map("updated_at") @db.Timestamptz(6)
   auditResults AuditResult[]
-  pageResults  PageAuditResult[]
   summary      AuditSummary?
+  website      Website           @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  pageResults  PageAuditResult[]
 
   @@index([websiteId])
   @@map("audits")
 }
 
-// Audit category model for different types of audits
 model AuditCategory {
   id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String       @unique
   description String?
-  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   checks      AuditCheck[]
 
   @@map("audit_categories")
 }
 
-// Audit check model for specific checks within categories
 model AuditCheck {
   id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   categoryId   String            @map("category_id") @db.Uuid
   name         String
   description  String?
   weight       Int               @default(1)
-  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   category     AuditCategory     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   auditResults AuditResult[]
   pageResults  PageAuditResult[]
@@ -93,7 +86,6 @@ model AuditCheck {
   @@map("audit_checks")
 }
 
-// Audit result model to store results of individual checks
 model AuditResult {
   id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   auditId   String     @map("audit_id") @db.Uuid
@@ -101,7 +93,7 @@ model AuditResult {
   status    String     @db.VarChar(50)
   score     Int?
   details   Json?
-  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
   audit     Audit      @relation(fields: [auditId], references: [id], onDelete: Cascade)
   check     AuditCheck @relation(fields: [checkId], references: [id], onDelete: Cascade)
 
@@ -111,23 +103,21 @@ model AuditResult {
   @@map("audit_results")
 }
 
-// Page model to store information about individual pages
 model Page {
   id        String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   websiteId String            @map("website_id") @db.Uuid
   url       String            @db.VarChar(2048)
   title     String?           @db.VarChar(512)
-  createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime          @default(now()) @map("updated_at") @db.Timestamptz
-  website   Website           @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime          @default(now()) @map("updated_at") @db.Timestamptz(6)
   results   PageAuditResult[]
+  website   Website           @relation(fields: [websiteId], references: [id], onDelete: Cascade)
 
   @@unique([websiteId, url])
   @@index([websiteId])
   @@map("pages")
 }
 
-// Page audit result model for page-specific audit results
 model PageAuditResult {
   id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   auditId   String     @map("audit_id") @db.Uuid
@@ -136,10 +126,10 @@ model PageAuditResult {
   status    String     @db.VarChar(50)
   score     Int?
   details   Json?
-  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
   audit     Audit      @relation(fields: [auditId], references: [id], onDelete: Cascade)
-  page      Page       @relation(fields: [pageId], references: [id], onDelete: Cascade)
   check     AuditCheck @relation(fields: [checkId], references: [id], onDelete: Cascade)
+  page      Page       @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
   @@unique([auditId, pageId, checkId])
   @@index([auditId])
@@ -148,41 +138,30 @@ model PageAuditResult {
   @@map("page_audit_results")
 }
 
-// Audit summary model for overall audit summaries
 model AuditSummary {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  auditId      String   @unique @map("audit_id") @db.Uuid
-  overallScore Int?     @map("overall_score")
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auditId       String   @unique @map("audit_id") @db.Uuid
+  overallScore  Int?     @map("overall_score")
   summaryReport Json?    @map("summary_report")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz
-  audit        Audit    @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  audit         Audit    @relation(fields: [auditId], references: [id], onDelete: Cascade)
 
   @@map("audit_summaries")
 }
 
-// Enum for schedule frequency
-enum ScheduleFrequency {
-  DAILY
-  WEEKLY
-  BIWEEKLY
-  MONTHLY
-  QUARTERLY
-}
-
-// Audit schedule model for recurring scheduled audits
 model AuditSchedule {
   id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   websiteId       String            @unique @map("website_id") @db.Uuid
   enabled         Boolean           @default(false)
   frequency       ScheduleFrequency @default(WEEKLY)
   categories      String[]          @default(["SEO", "PERFORMANCE", "ACCESSIBILITY", "SECURITY", "MOBILE", "CONTENT"])
-  lastRunAt       DateTime?         @map("last_run_at") @db.Timestamptz
-  nextScheduledAt DateTime?         @map("next_scheduled_at") @db.Timestamptz
-  dayOfWeek       Int?              @map("day_of_week") // 0-6 for Sunday-Saturday
-  dayOfMonth      Int?              @map("day_of_month") // 1-31
-  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime          @default(now()) @map("updated_at") @db.Timestamptz
+  lastRunAt       DateTime?         @map("last_run_at") @db.Timestamptz(6)
+  nextScheduledAt DateTime?         @map("next_scheduled_at") @db.Timestamptz(6)
+  dayOfWeek       Int?              @map("day_of_week")
+  dayOfMonth      Int?              @map("day_of_month")
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime          @default(now()) @map("updated_at") @db.Timestamptz(6)
   website         Website           @relation(fields: [websiteId], references: [id], onDelete: Cascade)
 
   @@index([websiteId])
@@ -191,49 +170,66 @@ model AuditSchedule {
   @@map("audit_schedules")
 }
 
-// Enum for alert severity
-enum AlertSeverity {
-  INFO
-  WARNING
-  ERROR
-  CRITICAL
+enum ScheduleFrequency {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
 }
 
-// Alert model for monitoring notifications
-model Alert {
-  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  websiteId String        @map("website_id") @db.Uuid
-  type      String
-  severity  AlertSeverity @default(INFO)
-  message   String
-  metric    String?
-  threshold Float?
-  value     Float?
-  read      Boolean       @default(false)
-  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime      @default(now()) @map("updated_at") @db.Timestamptz
-  website   Website       @relation(fields: [websiteId], references: [id], onDelete: Cascade)
-
-  @@index([websiteId])
-  @@index([createdAt])
-  @@index([read])
-  @@map("alerts")
-}
-
-// Monitoring configuration model
 model MonitoringConfig {
-  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  websiteId         String            @unique @map("website_id") @db.Uuid
-  enabled           Boolean           @default(false)
-  frequency         ScheduleFrequency @default(WEEKLY)
-  alertThreshold    Int               @default(10) @map("alert_threshold")
-  metrics           String[]          @default(["overallScore", "seoScore", "performanceScore"])
+  id                 String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  websiteId          String            @unique @map("website_id") @db.Uuid
+  enabled            Boolean           @default(false)
+  frequency          String            @default("WEEKLY") 
+  alertThreshold     Int               @default(10) @map("alert_threshold")
+  metrics            String[]          @default(["overallScore", "seoScore", "performanceScore"])
   emailNotifications Boolean           @default(true) @map("email_notifications")
-  slackWebhook      String?           @map("slack_webhook")
-  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt         DateTime          @default(now()) @map("updated_at") @db.Timestamptz
-  website           Website           @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  slackWebhook       String?           @map("slack_webhook")
+  nextCheckAt        DateTime?         @map("next_check_at") @db.Timestamptz(6)
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime          @default(now()) @map("updated_at") @db.Timestamptz(6)
+  website            Website           @relation(fields: [websiteId], references: [id], onDelete: Cascade)
 
   @@index([websiteId])
   @@map("monitoring_configs")
+}
+
+model MonitoringCheck {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  websiteId   String    @map("website_id") @db.Uuid
+  startedAt   DateTime  @default(now()) @map("started_at") @db.Timestamptz(6)
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(6)
+  status      String    @default("PENDING")
+  results     Json?     @db.JsonB
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  website     Website   @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId])
+  @@map("monitoring_checks")
+}
+
+model MonitoringAlert {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  websiteId String   @map("website_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  title     String
+  message   String
+  severity  String
+  metric    String
+  value     Float
+  threshold Float
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  website   Website  @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId])
+  @@index([userId])
+  @@index([read])
+  @@index([severity])
+  @@map("monitoring_alerts")
 }

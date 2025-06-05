@@ -1,107 +1,151 @@
+// components/ui/rolling-carousel.tsx
+// A responsive carousel component that rolls through cards with customizable colors
+
 import React from 'react';
 import styled from 'styled-components';
 
-const RollingCarousel = () => {
+interface CarouselItem {
+  id: string | number;
+  color?: string;
+  imageUrl?: string;
+}
+
+interface RollingCarouselProps {
+  items?: CarouselItem[];
+  autoRotate?: boolean;
+  rotationSpeed?: number;
+}
+
+const RollingCarousel: React.FC<RollingCarouselProps> = ({ 
+  items = [], 
+  autoRotate = true,
+  rotationSpeed = 5000
+}) => {
+  // Default colors if none provided
+  const defaultColors = [
+    '142, 249, 252', '142, 252, 204', '142, 252, 157', '215, 252, 142',
+    '252, 252, 142', '252, 208, 142', '252, 142, 142', '252, 142, 239',
+    '204, 142, 252', '142, 145, 252'
+  ];
+
+  // Use provided items or create default items
+  const carouselItems: CarouselItem[] = items.length > 0 ? items : Array.from({ length: 10 }, (_, i) => ({
+    id: i,
+    color: defaultColors[i],
+    imageUrl: undefined
+  }));
+
+  // Auto-rotation effect
+  React.useEffect(() => {
+    if (!autoRotate) return;
+    
+    const interval = setInterval(() => {
+      const wrapper = document.querySelector('.wrapper') as HTMLElement;
+      if (wrapper) {
+        wrapper.style.setProperty('--offset', (parseInt(wrapper.style.getPropertyValue('--offset') || '0') + 1) % carouselItems.length + '');
+      }
+    }, rotationSpeed);
+    
+    return () => clearInterval(interval);
+  }, [autoRotate, rotationSpeed, carouselItems.length]);
+
   return (
     <StyledWrapper>
       <div className="wrapper">
-        <div className="inner" style={{-quantity: 10}}>
-          <div className="card" style={{-index: 0, -colorCard: '142, 249, 252'}}>
-            <div className="img" />
-          </div>
-          <div className="card" style={{-index: 1, -colorCard: '142, 252, 204'}}>
-            <div className="img" />
-          </div>
-          <div className="card" style={{-index: 2, -colorCard: '142, 252, 157'}}>
-            <div className="img" />
-          </div>
-          <div className="card" style={{-index: 3, -colorCard: '215, 252, 142'}}>
-            <div className="img" />
-          </div>
-          <div className="card" style={{-index: 4, -colorCard: '252, 252, 142'}}>
-            <div className="img" />
-          </div>
-          <div className="card" style={{-index: 5, -colorCard: '252, 208, 142'}}>
-            <div className="img" />
-          </div>
-          <div className="card" style={{-index: 6, -colorCard: '252, 142, 142'}}>
-            <div className="img" />
-          </div>
-          <div className="card" style={{-index: 7, -colorCard: '252, 142, 239'}}>
-            <div className="img" />
-          </div>
-          <div className="card" style={{-index: 8, -colorCard: '204, 142, 252'}}>
-            <div className="img" />
-          </div>
-          <div className="card" style={{-index: 9, -colorCard: '142, 202, 252'}}>
-            <div className="img" />
-          </div>
+        <div className="inner" style={{"--quantity": carouselItems.length} as React.CSSProperties}>
+          {carouselItems.map((item, index) => (
+            <div 
+              key={item.id} 
+              className="card" 
+              style={{
+                "--index": index, 
+                "--colorCard": item.color || defaultColors[index % defaultColors.length]
+              } as React.CSSProperties}
+            >
+              <div 
+                className="img" 
+                style={item.imageUrl ? { backgroundImage: `url(${item.imageUrl})` } : undefined} 
+              />
+            </div>
+          ))}
         </div>
       </div>
     </StyledWrapper>
   );
-}
+};
 
 const StyledWrapper = styled.div`
+  width: 100%;
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  
   .wrapper {
     width: 100%;
     height: 100%;
     position: relative;
-    text-align: center;
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
-  }
-
-  .inner {
-    --w: 100px;
-    --h: 150px;
-    --translateZ: calc((var(--w) + var(--h)) + 0px);
-    --rotateX: -15deg;
-    --perspective: 1000px;
-    position: absolute;
-    width: var(--w);
-    height: var(--h);
-    top: 25%;
-    left: calc(50% - (var(--w) / 2) - 2.5px);
-    z-index: 2;
     transform-style: preserve-3d;
-    transform: perspective(var(--perspective));
-    animation: rotating 20s linear infinite; /* */
+    perspective: 500px;
+    --offset: 0;
   }
-  @keyframes rotating {
-    from {
-      transform: perspective(var(--perspective)) rotateX(var(--rotateX))
-        rotateY(0);
-    }
-    to {
-      transform: perspective(var(--perspective)) rotateX(var(--rotateX))
-        rotateY(1turn);
-    }
+  
+  .inner {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transform: translateZ(-30vw) rotateY(calc(var(--offset) * (360deg / var(--quantity))));
+    transition: transform 0.5s ease-in-out;
   }
 
   .card {
     position: absolute;
-    border: 2px solid rgba(var(--color-card));
-    border-radius: 12px;
+    top: 0;
+    left: 0;
+    width: 25vw;
+    height: 80%;
+    max-width: 300px;
+    max-height: 400px;
+    border-radius: 1rem;
+    transform-style: preserve-3d;
+    transform: 
+      rotateY(calc(var(--index) * (360deg / var(--quantity))))
+      translateZ(30vw);
+    filter: drop-shadow(0 20px 25px rgb(0 0 0 / 0.15));
+    background: rgba(var(--colorCard), 0.8);
+    transition: all 0.3s ease;
     overflow: hidden;
-    inset: 0;
-    transform: rotateY(calc((360deg / var(--quantity)) * var(--index)))
-      translateZ(var(--translateZ));
+    
+    &:hover {
+      transform: 
+        rotateY(calc(var(--index) * (360deg / var(--quantity))))
+        translateZ(32vw);
+      background: rgba(var(--colorCard), 1);
+    }
+    
+    .img {
+      width: 100%;
+      height: 100%;
+      background-size: cover;
+      background-position: center;
+    }
   }
+  
+  @media (max-width: 768px) {
+    height: 200px;
+    
+    .card {
+      width: 40vw;
+      height: 70%;
+    }
+  }
+`;
 
-  .img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    background: #0000
-      radial-gradient(
-        circle,
-        rgba(var(--color-card), 0.2) 0%,
-        rgba(var(--color-card), 0.6) 80%,
-        rgba(var(--color-card), 0.9) 100%
-      );
-  }`;
 
 export default RollingCarousel;
+

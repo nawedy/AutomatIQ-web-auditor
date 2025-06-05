@@ -1,0 +1,4 @@
+# This is an empty migration.toml file for the add_monitoring_models migration
+# Prisma will use this to track the migration
+
+migration_name = "20250605185223_add_monitoring_models"

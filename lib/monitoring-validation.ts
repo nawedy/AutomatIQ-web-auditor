@@ -17,6 +17,7 @@ export async function validateWebsiteAccess(
   isAdmin: boolean
 ): Promise<{ 
   isValid: boolean; 
+  error?: string;
   response?: NextResponse; 
   website?: any;
 }> {
@@ -24,6 +25,7 @@ export async function validateWebsiteAccess(
   if (!websiteId) {
     return {
       isValid: false,
+      error: 'Website ID is required',
       response: NextResponse.json(
         { error: 'Website ID is required' },
         { status: 400 }
@@ -35,6 +37,7 @@ export async function validateWebsiteAccess(
   if (!isValidUUID(websiteId)) {
     return {
       isValid: false,
+      error: 'Invalid website ID format',
       response: NextResponse.json(
         { error: 'Invalid website ID format' },
         { status: 400 }
@@ -57,6 +60,7 @@ export async function validateWebsiteAccess(
     if (!website) {
       return {
         isValid: false,
+        error: 'Website not found or you do not have permission to access it',
         response: NextResponse.json(
           { error: 'Website not found or you do not have permission to access it' },
           { status: 404 }
@@ -72,6 +76,7 @@ export async function validateWebsiteAccess(
     console.error('Error validating website access:', error);
     return {
       isValid: false,
+      error: `Failed to validate website access: ${(error as Error).message}`,
       response: NextResponse.json(
         { error: `Failed to validate website access: ${(error as Error).message}` },
         { status: 500 }
@@ -90,6 +95,7 @@ export function validatePaginationParams(
   limit: number; 
   offset: number;
   isValid: boolean;
+  error?: string;
   response?: NextResponse;
 } {
   let limit = 10;
@@ -102,6 +108,7 @@ export function validatePaginationParams(
         limit,
         offset,
         isValid: false,
+        error: 'Limit must be a positive number',
         response: NextResponse.json(
           { error: 'Limit must be a positive number' },
           { status: 400 }
@@ -120,6 +127,7 @@ export function validatePaginationParams(
         limit,
         offset,
         isValid: false,
+        error: 'Offset must be a non-negative number',
         response: NextResponse.json(
           { error: 'Offset must be a non-negative number' },
           { status: 400 }
@@ -142,13 +150,15 @@ export function validatePaginationParams(
 export function validateAlertIds(
   alertIds: any
 ): {
-  isValid: boolean;
+  success: boolean;
+  error?: string;
   response?: NextResponse;
 } {
   // Check if alertIds is provided and is an array
   if (!alertIds || !Array.isArray(alertIds) || alertIds.length === 0) {
     return {
-      isValid: false,
+      success: false,
+      error: 'Alert IDs are required and must be a non-empty array',
       response: NextResponse.json(
         { error: 'Alert IDs are required and must be a non-empty array' },
         { status: 400 }
@@ -160,7 +170,8 @@ export function validateAlertIds(
   for (const alertId of alertIds) {
     if (!isValidUUID(alertId)) {
       return {
-        isValid: false,
+        success: false,
+        error: `Invalid alert ID format: ${alertId}`,
         response: NextResponse.json(
           { error: `Invalid alert ID format: ${alertId}` },
           { status: 400 }
@@ -170,7 +181,7 @@ export function validateAlertIds(
   }
   
   return {
-    isValid: true
+    success: true
   };
 }
 

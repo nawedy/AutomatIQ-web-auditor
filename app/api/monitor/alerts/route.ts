@@ -11,7 +11,8 @@ import { validateWebsiteAccess, validatePaginationParams, validateAlertIds, safe
 import { sanitizeString, sanitizeObject, sanitizeArray } from '@/lib/sanitization-utils';
 
 const prisma = new PrismaClient();
-const monitoringService = new MonitoringService();
+// Initialize MonitoringService with the prisma instance for better testability
+const monitoringService = new MonitoringService(prisma);
 
 /**
  * GET handler for retrieving monitoring alerts
@@ -21,7 +22,7 @@ export const GET = withRateLimit(
     request: NextRequest,
     context: any,
     user: { id: string; email: string; role?: string }
-  ) => {
+  ): Promise<NextResponse> => {
     try {
       // Extract and sanitize query params
       const { searchParams } = new URL(request.url);
@@ -38,7 +39,7 @@ export const GET = withRateLimit(
       );
       
       if (!accessValidation.isValid) {
-        return accessValidation.response;
+        return accessValidation.response || NextResponse.json({ error: 'Access denied' }, { status: 403 });
       }
       
       // Validate pagination parameters
@@ -48,25 +49,23 @@ export const GET = withRateLimit(
       );
       
       if (!paginationValidation.isValid) {
-        return paginationValidation.response;
+        return NextResponse.json({ error: paginationValidation.error }, { status: 400 });
       }
       
       const { limit: sanitizedLimit, offset: sanitizedOffset } = paginationValidation;
+      const sanitizedWebsiteId = sanitizeString(websiteId);
       
-      // Get alerts
-      const alerts = await monitoringService.getAlerts(websiteId, {
-        unreadOnly,
-        limit: sanitizedLimit,
-        offset: sanitizedOffset
-      });
+      // Get alerts with pagination
+      const page = Math.floor(sanitizedOffset / sanitizedLimit) + 1;
+      const alerts = await monitoringService.getAlertsFromCacheOrDatabase(
+        sanitizedWebsiteId,
+        page,
+        sanitizedLimit,
+        unreadOnly
+      );
       
       // Get total count for pagination
-      const totalCount = await prisma.alert.count({
-        where: {
-          websiteId,
-          ...(unreadOnly ? { read: false } : {})
-        }
-      });
+      const totalCount = await monitoringService.getAlertsCount(sanitizedWebsiteId, unreadOnly);
       
       return NextResponse.json({
         alerts,
@@ -78,13 +77,13 @@ export const GET = withRateLimit(
         }
       });
     } catch (error) {
-      console.error('Error fetching alerts:', error);
-      return NextResponse.json(
-        { error: `Failed to fetch alerts: ${(error as Error).message}` },
-        { status: 500 }
-      );
+      console.error('Error fetching monitoring alerts:', error);
+      return NextResponse.json({ 
+        error: 'Failed to fetch monitoring alerts', 
+        message: (error as Error).message 
+      }, { status: 500 });
     } finally {
-      await prisma.$disconnect();
+      await safeDisconnect();
     }
   }),
   {
@@ -101,7 +100,7 @@ export const POST = withRateLimit(
     request: NextRequest,
     context: any,
     user: { id: string; email: string; role?: string }
-  ) => {
+  ): Promise<NextResponse> => {
     try {
       // Parse and sanitize request body
       const rawData = await request.json();
@@ -121,33 +120,37 @@ export const POST = withRateLimit(
       }
 
       // Validate website access
+      const sanitizedWebsiteId = sanitizeString(websiteId);
       const accessValidation = await validateWebsiteAccess(
-        websiteId,
+        sanitizedWebsiteId,
         user.id,
         user.role === 'ADMIN'
       );
       
       if (!accessValidation.isValid) {
-        return accessValidation.response;
+        return NextResponse.json({ error: accessValidation.error || 'Access denied' }, { status: 403 });
       }
       
       // Validate alert IDs
       const alertIdsValidation = validateAlertIds(alertIds);
-      if (!alertIdsValidation.isValid) {
-        return alertIdsValidation.response;
+      if (!alertIdsValidation.success) {
+        return NextResponse.json({ error: alertIdsValidation.error }, { status: 400 });
       }
       
-      // Verify all alerts belong to the specified website
-      const alertCount = await prisma.alert.count({
+      // Verify alerts exist and belong to the website
+      const existingAlerts = await prisma.alert.findMany({
         where: {
           id: {
             in: alertIds
           },
-          websiteId
+          websiteId: sanitizedWebsiteId
+        },
+        select: {
+          id: true
         }
       });
       
-      if (alertCount !== alertIds.length) {
+      if (existingAlerts.length !== alertIds.length) {
         return NextResponse.json(
           { error: 'Some alerts do not exist or do not belong to the specified website' },
           { status: 400 }
@@ -155,27 +158,21 @@ export const POST = withRateLimit(
       }
       
       // Mark alerts as read
-      const success = await monitoringService.markAlertsAsRead(alertIds);
+      const success = await monitoringService.markAlertsAsRead(sanitizedWebsiteId, alertIds);
       
       if (!success) {
-        return NextResponse.json(
-          { error: 'Failed to mark alerts as read' },
-          { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to mark alerts as read' }, { status: 500 });
       }
       
-      return NextResponse.json({
-        success: true,
-        message: 'Alerts marked as read successfully'
-      });
+      return NextResponse.json({ success: true });
     } catch (error) {
       console.error('Error marking alerts as read:', error);
-      return NextResponse.json(
-        { error: `Failed to mark alerts as read: ${(error as Error).message}` },
-        { status: 500 }
-      );
+      return NextResponse.json({ 
+        error: 'Failed to mark alerts as read', 
+        message: (error as Error).message 
+      }, { status: 500 });
     } finally {
-      await prisma.$disconnect();
+      await safeDisconnect();
     }
   }),
   {

@@ -11,7 +11,8 @@ import { validateWebsiteAccess, safeDisconnect } from '@/lib/monitoring-validati
 import { sanitizeString, sanitizeObject, sanitizeUrl } from '@/lib/sanitization-utils';
 
 const prisma = new PrismaClient();
-const monitoringService = new MonitoringService();
+// Initialize MonitoringService with the prisma instance for better testability
+const monitoringService = new MonitoringService(prisma);
 
 /**
  * GET handler for retrieving monitoring configuration
@@ -49,25 +50,31 @@ export const GET = withRateLimit(
         );
       }
       
-      // Get monitoring configuration
-      const config = await prisma.monitoringConfig.findUnique({
-        where: { websiteId }
-      });
-      
-      // If no config exists, return default values
-      if (!config) {
-        return NextResponse.json({
-          websiteId,
-          enabled: false,
-          frequency: 'WEEKLY',
-          alertThreshold: 10,
-          metrics: ['overallScore', 'seoScore', 'performanceScore'],
-          emailNotifications: true,
-          slackWebhook: null
-        });
+      // Get monitoring configuration using our service with caching
+      try {
+        const config = await monitoringService.getMonitoringConfig(websiteId);
+        
+        // If no config exists, return default values
+        if (!config) {
+          return NextResponse.json({
+            websiteId,
+            enabled: false,
+            frequency: 'WEEKLY',
+            alertThreshold: 10,
+            metrics: ['overallScore', 'seoScore', 'performanceScore'],
+            emailNotifications: true,
+            slackWebhook: null
+          });
+        }
+        
+        return NextResponse.json(config);
+      } catch (configError) {
+        console.error('Error fetching monitoring config:', configError);
+        return NextResponse.json(
+          { error: `Failed to fetch monitoring configuration: ${(configError as Error).message}` },
+          { status: 500 }
+        );
       }
-      
-      return NextResponse.json(config);
     } catch (error) {
       console.error('Error fetching monitoring config:', error);
       return NextResponse.json(
@@ -135,18 +142,22 @@ export const POST = withRateLimit(
       }
       
       // Update monitoring configuration with sanitized data
-      const success = await monitoringService.updateMonitoringConfig(websiteId, {
-        enabled,
-        frequency,
-        alertThreshold,
-        metrics: Array.isArray(metrics) ? metrics : [],
-        emailNotifications,
-        slackWebhook: sanitizedWebhook || undefined
-      });
-      
-      if (!success) {
+      try {
+        // Create a properly typed config object matching the expected interface
+        const configData = {
+          enabled: Boolean(enabled),
+          frequency: String(frequency),
+          alertThreshold: Number(alertThreshold),
+          metrics: Array.isArray(metrics) ? metrics : [],
+          emailNotifications: Boolean(emailNotifications),
+          slackWebhook: sanitizedWebhook || undefined
+        };
+        
+        await monitoringService.updateMonitoringConfig(websiteId, configData);
+      } catch (updateError) {
+        console.error('Error updating monitoring config:', updateError);
         return NextResponse.json(
-          { error: 'Failed to update monitoring configuration' },
+          { error: `Failed to update monitoring configuration: ${(updateError as Error).message}` },
           { status: 500 }
         );
       }
@@ -208,11 +219,15 @@ export const DELETE = withRateLimit(
       }
       
       // Disable monitoring
-      const success = await monitoringService.toggleMonitoring(websiteId, false);
-      
-      if (!success) {
+      try {
+        // Use the updateMonitoringConfig method with enabled: false
+        await monitoringService.updateMonitoringConfig(websiteId, {
+          enabled: false
+        });
+      } catch (disableError) {
+        console.error('Error disabling monitoring:', disableError);
         return NextResponse.json(
-          { error: 'Failed to disable monitoring' },
+          { error: `Failed to disable monitoring: ${(disableError as Error).message}` },
           { status: 500 }
         );
       }

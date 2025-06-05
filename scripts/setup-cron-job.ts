@@ -1,5 +1,5 @@
 // src/scripts/setup-cron-job.ts
-// Script to set up the cron job for processing scheduled audits
+// Script to set up the cron jobs for processing scheduled audits and monitoring checks
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -23,7 +23,7 @@ if (!CRON_SECRET) {
 
 async function setupVercelCron() {
   try {
-    console.log('🔄 Setting up Vercel Cron Job for scheduled audits...');
+    console.log('🔄 Setting up Vercel Cron Jobs for scheduled audits and monitoring checks...');
     
     // Check if Vercel CLI is installed
     try {
@@ -34,16 +34,23 @@ async function setupVercelCron() {
       process.exit(1);
     }
     
+    // Define the cron jobs to set up
+    const cronJobs = [
+      {
+        path: '/api/cron/run-scheduled-audits',
+        schedule: '0 */6 * * *', // Every 6 hours
+      },
+      {
+        path: '/api/cron/run-monitoring-checks',
+        schedule: '*/15 * * * *', // Every 15 minutes
+      },
+    ];
+    
     // Create vercel.json if it doesn't exist
     const vercelJsonPath = path.join(process.cwd(), 'vercel.json');
-    let vercelConfig = {
+    let vercelConfig: any = {
       version: 2,
-      crons: [
-        {
-          path: "/api/cron/scheduled-audits",
-          schedule: "0 */6 * * *" // Run every 6 hours
-        }
-      ],
+      crons: cronJobs,
       headers: [
         {
           source: "/api/(.*)",
@@ -64,10 +71,17 @@ async function setupVercelCron() {
       vercelConfig = {
         ...existingConfig,
         crons: [
-          ...(existingConfig.crons || []).filter((cron: any) => cron.path !== "/api/cron/scheduled-audits"),
+          ...(existingConfig.crons || []).filter((cron: any) => 
+            cron.path !== "/api/cron/scheduled-audits" && 
+            cron.path !== "/api/cron/run-monitoring-checks"
+          ),
           {
             path: "/api/cron/scheduled-audits",
             schedule: "0 */6 * * *" // Run every 6 hours
+          },
+          {
+            path: "/api/cron/run-monitoring-checks",
+            schedule: "*/15 * * * *" // Run every 15 minutes
           }
         ]
       };
@@ -77,8 +91,8 @@ async function setupVercelCron() {
     fs.writeFileSync(vercelJsonPath, JSON.stringify(vercelConfig, null, 2));
     console.log('✅ Updated vercel.json with cron job configuration');
     
-    // Test the cron job endpoint
-    console.log('🧪 Testing cron job endpoint...');
+    // Test the cron job endpoints
+    console.log('🧪 Testing scheduled audits endpoint...');
     try {
       const { stdout, stderr } = await execAsync(`curl -X GET "${API_BASE_URL}/api/cron/scheduled-audits" -H "Authorization: Bearer ${CRON_SECRET}"`);
       console.log('Response:', stdout);
@@ -86,7 +100,18 @@ async function setupVercelCron() {
         console.error('Error:', stderr);
       }
     } catch (error) {
-      console.error('❌ Failed to test cron job endpoint:', error);
+      console.error('❌ Failed to test scheduled audits endpoint:', error);
+    }
+    
+    console.log('🧪 Testing monitoring checks endpoint...');
+    try {
+      const { stdout, stderr } = await execAsync(`curl -X GET "${API_BASE_URL}/api/cron/run-monitoring-checks" -H "Authorization: Bearer ${CRON_SECRET}"`);
+      console.log('Response:', stdout);
+      if (stderr) {
+        console.error('Error:', stderr);
+      }
+    } catch (error) {
+      console.error('❌ Failed to test monitoring checks endpoint:', error);
     }
     
     console.log('\n📋 Next steps:');

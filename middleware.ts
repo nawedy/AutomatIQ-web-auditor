@@ -1,7 +1,24 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { rateLimitMiddleware } from './lib/middleware/rate-limit';
 
 export async function middleware(request: NextRequest) {
+  // Create the response first so we can modify headers
+  const response = NextResponse.next();
+  
+  // Add security headers to all responses
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-XSS-Protection', '1; mode=block');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), interest-cohort=()');
+  
+  // Only apply rate limiting to API routes
+  if (request.nextUrl.pathname.startsWith('/api')) {
+    // Apply rate limiting
+    return rateLimitMiddleware(request, response);
+  }
+  
   // Handle placeholder image requests
   if (request.nextUrl.pathname.startsWith('/api/placeholder/')) {
     // Skip redirection if already requesting an SVG file

@@ -28,15 +28,19 @@ model User {
 
 // Website model to store information about websites being audited
 model Website {
-  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String    @map("user_id") @db.Uuid
-  url       String    @db.VarChar(2048)
-  name      String
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
-  audits    Audit[]
-  pages     Page[]
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String           @map("user_id") @db.Uuid
+  url              String           @db.VarChar(2048)
+  name             String
+  monitoringEnabled Boolean          @default(false) @map("monitoring_enabled")
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime         @default(now()) @map("updated_at") @db.Timestamptz
+  audits           Audit[]
+  pages            Page[]
+  auditSchedule    AuditSchedule?
+  monitoringConfig MonitoringConfig?
+  alerts           Alert[]
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, url])
   @@index([userId])
@@ -155,4 +159,81 @@ model AuditSummary {
   audit        Audit    @relation(fields: [auditId], references: [id], onDelete: Cascade)
 
   @@map("audit_summaries")
+}
+
+// Enum for schedule frequency
+enum ScheduleFrequency {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+}
+
+// Audit schedule model for recurring scheduled audits
+model AuditSchedule {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  websiteId       String            @unique @map("website_id") @db.Uuid
+  enabled         Boolean           @default(false)
+  frequency       ScheduleFrequency @default(WEEKLY)
+  categories      String[]          @default(["SEO", "PERFORMANCE", "ACCESSIBILITY", "SECURITY", "MOBILE", "CONTENT"])
+  lastRunAt       DateTime?         @map("last_run_at") @db.Timestamptz
+  nextScheduledAt DateTime?         @map("next_scheduled_at") @db.Timestamptz
+  dayOfWeek       Int?              @map("day_of_week") // 0-6 for Sunday-Saturday
+  dayOfMonth      Int?              @map("day_of_month") // 1-31
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime          @default(now()) @map("updated_at") @db.Timestamptz
+  website         Website           @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId])
+  @@index([enabled])
+  @@index([nextScheduledAt])
+  @@map("audit_schedules")
+}
+
+// Enum for alert severity
+enum AlertSeverity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+// Alert model for monitoring notifications
+model Alert {
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  websiteId String        @map("website_id") @db.Uuid
+  type      String
+  severity  AlertSeverity @default(INFO)
+  message   String
+  metric    String?
+  threshold Float?
+  value     Float?
+  read      Boolean       @default(false)
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime      @default(now()) @map("updated_at") @db.Timestamptz
+  website   Website       @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId])
+  @@index([createdAt])
+  @@index([read])
+  @@map("alerts")
+}
+
+// Monitoring configuration model
+model MonitoringConfig {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  websiteId         String            @unique @map("website_id") @db.Uuid
+  enabled           Boolean           @default(false)
+  frequency         ScheduleFrequency @default(WEEKLY)
+  alertThreshold    Int               @default(10) @map("alert_threshold")
+  metrics           String[]          @default(["overallScore", "seoScore", "performanceScore"])
+  emailNotifications Boolean           @default(true) @map("email_notifications")
+  slackWebhook      String?           @map("slack_webhook")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime          @default(now()) @map("updated_at") @db.Timestamptz
+  website           Website           @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId])
+  @@map("monitoring_configs")
 }

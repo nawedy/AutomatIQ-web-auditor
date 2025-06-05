@@ -7,23 +7,31 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Download, Globe } from "lucide-react"
+import { Download, Globe, AlertCircle, Loader2, FileText, FileSpreadsheet } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
-interface BulkExportProps {
-  reports: Array<{
-    id: string
-    website: string
-    date: string
-    score: number
-    status: string
-  }>
+interface AuditReport {
+  id: string
+  website: string
+  date: string
+  score: number
+  status: string
 }
 
-export function BulkExport({ reports }: BulkExportProps) {
+interface BulkExportProps {
+  reports: AuditReport[]
+  onExportComplete?: () => void
+}
+
+export function BulkExport({ reports, onExportComplete }: BulkExportProps) {
   const [selectedReports, setSelectedReports] = useState<string[]>([])
   const [exportFormat, setExportFormat] = useState("pdf")
   const [isExporting, setIsExporting] = useState(false)
   const [exportProgress, setExportProgress] = useState(0)
+  const [error, setError] = useState<string | null>(null)
+  const { toast } = useToast()
 
   const handleSelectAll = () => {
     if (selectedReports.length === reports.length) {
@@ -38,17 +46,82 @@ export function BulkExport({ reports }: BulkExportProps) {
   }
 
   const handleBulkExport = async () => {
-    setIsExporting(true)
-    setExportProgress(0)
-
-    // Simulate bulk export progress
-    for (let i = 0; i <= 100; i += 10) {
-      await new Promise((resolve) => setTimeout(resolve, 300))
-      setExportProgress(i)
+    try {
+      setIsExporting(true)
+      setExportProgress(0)
+      setError(null)
+      
+      // Start progress indicator
+      const progressInterval = setInterval(() => {
+        setExportProgress(prev => {
+          // Don't go to 100% until we're done
+          return prev < 90 ? prev + 5 : prev;
+        });
+      }, 500);
+      
+      // Call the bulk export API
+      const response = await fetch('/api/export/bulk', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          auditIds: selectedReports,
+          format: exportFormat,
+          options: {
+            includeDetails: true,
+            includeSummary: true,
+            includeRecommendations: true,
+            includeBranding: true
+          }
+        }),
+      });
+      
+      clearInterval(progressInterval);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to export reports');
+      }
+      
+      // Set progress to 100%
+      setExportProgress(100);
+      
+      // Get the file as blob
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `audit-reports-${Date.now()}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Show success toast
+      toast({
+        title: "Export successful",
+        description: `${selectedReports.length} reports have been exported successfully`,
+        variant: "default",
+      });
+      
+      // Call the onExportComplete callback if provided
+      if (onExportComplete) {
+        onExportComplete();
+      }
+    } catch (err) {
+      console.error('Export error:', err);
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      toast({
+        title: "Export failed",
+        description: err instanceof Error ? err.message : 'Failed to export reports',
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
     }
-
-    setIsExporting(false)
-  }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -90,14 +163,56 @@ export function BulkExport({ reports }: BulkExportProps) {
             </Select>
           </div>
           <div className="flex items-end">
-            <Button
-              onClick={handleBulkExport}
-              disabled={selectedReports.length === 0 || isExporting}
-              className="w-full shimmer text-white font-semibold"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              {isExporting ? "Exporting..." : `Export ${selectedReports.length} Reports`}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  disabled={selectedReports.length === 0 || isExporting}
+                  className="w-full shimmer text-white font-semibold"
+                >
+                  {isExporting ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  {isExporting ? "Exporting..." : `Export ${selectedReports.length} Reports`}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-slate-800 border-white/10">
+                <DropdownMenuItem 
+                  onClick={() => {
+                    setExportFormat('pdf');
+                    handleBulkExport();
+                  }}
+                  disabled={isExporting || selectedReports.length === 0}
+                  className="cursor-pointer"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export as PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => {
+                    setExportFormat('csv');
+                    handleBulkExport();
+                  }}
+                  disabled={isExporting || selectedReports.length === 0}
+                  className="cursor-pointer"
+                >
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => {
+                    setExportFormat('zip');
+                    handleBulkExport();
+                  }}
+                  disabled={isExporting || selectedReports.length === 0}
+                  className="cursor-pointer"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export as ZIP (PDF + CSV)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -110,6 +225,15 @@ export function BulkExport({ reports }: BulkExportProps) {
             </div>
             <Progress value={exportProgress} className="h-2" />
           </div>
+        )}
+        
+        {/* Error message */}
+        {error && (
+          <Alert variant="destructive" className="bg-red-900/20 border-red-900/50">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Export failed</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         {/* Report Selection */}

@@ -1,0 +1,182 @@
+// Additional schema models for enhanced AutomatIQ features
+
+// AuditSchedule model for recurring audits
+model AuditSchedule {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  websiteId    String   @map("website_id") @db.Uuid
+  frequency    String   @db.VarChar(50) // daily, weekly, biweekly, monthly
+  dayOfWeek    Int?     @map("day_of_week") // 0-6 for weekly/biweekly
+  dayOfMonth   Int?     @map("day_of_month") // 1-31 for monthly
+  timeOfDay    String   @map("time_of_day") @db.VarChar(5) // HH:MM in 24h format
+  isActive     Boolean  @default(true) @map("is_active")
+  lastRunAt    DateTime? @map("last_run_at") @db.Timestamptz
+  nextRunAt    DateTime? @map("next_run_at") @db.Timestamptz
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz
+  website      Website  @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  auditOptions Json?    @map("audit_options") // Store audit configuration options
+
+  @@index([websiteId])
+  @@index([nextRunAt])
+  @@map("audit_schedules")
+}
+
+// NotificationSetting model for alert preferences
+model NotificationSetting {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  websiteId         String?  @map("website_id") @db.Uuid
+  emailEnabled      Boolean  @default(true) @map("email_enabled")
+  slackEnabled      Boolean  @default(false) @map("slack_enabled")
+  slackWebhook      String?  @map("slack_webhook") @db.VarChar(1024)
+  criticalAlerts    Boolean  @default(true) @map("critical_alerts")
+  warningAlerts     Boolean  @default(true) @map("warning_alerts")
+  infoAlerts        Boolean  @default(false) @map("info_alerts")
+  scoreThreshold    Int?     @map("score_threshold") // Alert if score drops below this
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime @default(now()) @map("updated_at") @db.Timestamptz
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  website           Website? @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([websiteId])
+  @@map("notification_settings")
+}
+
+// AlertHistory model for tracking sent notifications
+model AlertHistory {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  websiteId    String   @map("website_id") @db.Uuid
+  auditId      String?  @map("audit_id") @db.Uuid
+  alertType    String   @map("alert_type") @db.VarChar(50) // critical, warning, info
+  channel      String   @db.VarChar(50) // email, slack, etc.
+  message      String   @db.Text
+  sentAt       DateTime @default(now()) @map("sent_at") @db.Timestamptz
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  website      Website  @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  audit        Audit?   @relation(fields: [auditId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([websiteId])
+  @@index([auditId])
+  @@map("alert_history")
+}
+
+// Enhancements to existing models
+
+// Add to User model
+model User {
+  // Existing fields...
+  notificationSettings NotificationSetting[]
+  alertHistory         AlertHistory[]
+}
+
+// Add to Website model
+model Website {
+  // Existing fields...
+  schedules           AuditSchedule[]
+  notificationSettings NotificationSetting[]
+  alertHistory         AlertHistory[]
+  monitoringEnabled    Boolean @default(false) @map("monitoring_enabled")
+}
+
+// Add to Audit model
+model Audit {
+  // Existing fields...
+  scheduledAuditId    String?  @map("scheduled_audit_id") @db.Uuid
+  alertHistory        AlertHistory[]
+  comparisonAuditId   String?  @map("comparison_audit_id") @db.Uuid
+  comparisonAudit     Audit?   @relation("AuditComparison", fields: [comparisonAuditId], references: [id], onDelete: SetNull)
+  comparedByAudits    Audit[]  @relation("AuditComparison")
+}
+
+// SecurityScan model for detailed security assessments
+model SecurityScan {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auditId           String   @map("audit_id") @db.Uuid
+  sslGrade          String?  @map("ssl_grade") @db.VarChar(2)
+  sslIssues         Json?    @map("ssl_issues")
+  securityHeaders   Json?    @map("security_headers")
+  vulnerabilities   Json?    @map("vulnerabilities")
+  malwareDetected   Boolean  @default(false) @map("malware_detected")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+  audit             Audit    @relation(fields: [auditId], references: [id], onDelete: Cascade)
+
+  @@unique([auditId])
+  @@map("security_scans")
+}
+
+// CrossBrowserResult model for browser compatibility testing
+model CrossBrowserResult {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auditId      String   @map("audit_id") @db.Uuid
+  browser      String   @db.VarChar(50) // chrome, firefox, safari, edge
+  version      String   @db.VarChar(20)
+  deviceType   String   @db.VarChar(20) // desktop, mobile, tablet
+  screenshot   String?  @db.Text // URL to screenshot
+  issues       Json?
+  score        Int?
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  audit        Audit    @relation(fields: [auditId], references: [id], onDelete: Cascade)
+
+  @@unique([auditId, browser, version, deviceType])
+  @@map("cross_browser_results")
+}
+
+// ContentAnalysis model for NLP-powered content evaluation
+model ContentAnalysis {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auditId         String   @map("audit_id") @db.Uuid
+  pageId          String   @map("page_id") @db.Uuid
+  readabilityScore Int?     @map("readability_score")
+  sentimentScore   Float?   @map("sentiment_score") // -1.0 to 1.0
+  keywordDensity   Json?    @map("keyword_density")
+  contentQuality   Json?    @map("content_quality")
+  grammarIssues    Json?    @map("grammar_issues")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  audit            Audit    @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  page             Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([auditId, pageId])
+  @@map("content_analyses")
+}
+
+// ChatbotIntegration model
+model ChatbotIntegration {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  websiteId       String   @map("website_id") @db.Uuid
+  apiKey          String   @db.VarChar(255)
+  widgetSettings  Json?    @map("widget_settings")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @default(now()) @map("updated_at") @db.Timestamptz
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  website         Website  @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@unique([websiteId])
+  @@map("chatbot_integrations")
+}
+
+// AnalyticsIntegration model
+model AnalyticsIntegration {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  websiteId       String   @map("website_id") @db.Uuid
+  provider        String   @db.VarChar(50) // google, plausible, matomo, etc.
+  accountId       String?  @map("account_id") @db.VarChar(255)
+  propertyId      String?  @map("property_id") @db.VarChar(255)
+  viewId          String?  @map("view_id") @db.VarChar(255)
+  apiKey          String?  @db.VarChar(1024)
+  refreshToken    String?  @map("refresh_token") @db.VarChar(1024)
+  lastSyncAt      DateTime? @map("last_sync_at") @db.Timestamptz
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @default(now()) @map("updated_at") @db.Timestamptz
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  website         Website  @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@unique([websiteId, provider])
+  @@map("analytics_integrations")
+}

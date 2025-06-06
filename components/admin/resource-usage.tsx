@@ -6,7 +6,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { HardDrive, Cpu, Memory, Network } from "lucide-react"
+import { HardDrive, Cpu, MemoryStick, Network } from "lucide-react"
 
 interface ResourceUsageProps {
   storageUsed: number
@@ -41,7 +41,7 @@ export function AdminResourceUsage({ storageUsed, totalStorage }: ResourceUsageP
       total: 8,
       unit: "GB",
       percentage: 52.5,
-      icon: <Memory className="w-5 h-5 text-purple-400" />,
+      icon: <MemoryStick className="w-5 h-5 text-purple-400" />,
     },
     {
       name: "Network",
@@ -102,8 +102,7 @@ export function AdminResourceUsage({ storageUsed, totalStorage }: ResourceUsageP
               </div>
               <Progress 
                 value={resource.percentage} 
-                className="h-2" 
-                indicatorClassName={getProgressColor(resource.percentage)}
+                className={`h-2 ${getProgressColor(resource.percentage)}`}
               />
             </div>
           ))}
@@ -117,31 +116,31 @@ export function AdminResourceUsage({ storageUsed, totalStorage }: ResourceUsageP
               <span className="text-sm text-gray-300">Audit Processing</span>
               <span className="text-sm text-gray-300">45%</span>
             </div>
-            <Progress value={45} className="h-1.5" indicatorClassName="bg-blue-500" />
+            <Progress value={45} className="h-1.5 bg-blue-500" />
             
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-300">Database Operations</span>
               <span className="text-sm text-gray-300">25%</span>
             </div>
-            <Progress value={25} className="h-1.5" indicatorClassName="bg-purple-500" />
+            <Progress value={25} className="h-1.5 bg-purple-500" />
             
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-300">Report Generation</span>
               <span className="text-sm text-gray-300">15%</span>
             </div>
-            <Progress value={15} className="h-1.5" indicatorClassName="bg-green-500" />
+            <Progress value={15} className="h-1.5 bg-green-500" />
             
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-300">Real-time Monitoring</span>
               <span className="text-sm text-gray-300">10%</span>
             </div>
-            <Progress value={10} className="h-1.5" indicatorClassName="bg-yellow-500" />
+            <Progress value={10} className="h-1.5 bg-yellow-500" />
             
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-300">Other Services</span>
               <span className="text-sm text-gray-300">5%</span>
             </div>
-            <Progress value={5} className="h-1.5" indicatorClassName="bg-gray-500" />
+            <Progress value={5} className="h-1.5 bg-gray-500" />
           </div>
         </div>
         

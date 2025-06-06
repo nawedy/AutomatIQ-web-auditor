@@ -1,3 +1,6 @@
+// Import polyfills first to ensure browser globals are available
+import "@/lib/polyfills"
+
 import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Inter, Montserrat } from "next/font/google"

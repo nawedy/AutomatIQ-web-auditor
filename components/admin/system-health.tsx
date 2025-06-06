@@ -161,22 +161,17 @@ export function AdminSystemHealth({ refreshInterval = 30000, initialLoad = true 
         <div className="flex justify-between items-center">
           <div>
             <CardTitle className="text-white flex items-center gap-2">
-              <Server className="w-5 h-5 text-green-400" />
+              <Server className="w-5 h-5" />
               System Health
             </CardTitle>
-            <CardDescription className="text-gray-300">
-              Real-time performance metrics and system status
-              {lastUpdated && (
-                <span className="ml-2 text-xs opacity-70">
-                  Last updated: {lastUpdated.toLocaleTimeString()}
-                </span>
-              )}
+            <CardDescription className="text-gray-400">
+              Real-time system performance metrics
             </CardDescription>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="border-white/10 hover:bg-white/10"
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-white/20 text-white hover:bg-white/10"
             onClick={fetchSystemHealth}
             disabled={isLoading}
           >
@@ -198,14 +193,13 @@ export function AdminSystemHealth({ refreshInterval = 30000, initialLoad = true 
         {isLoading && !healthData ? (
           <div className="flex justify-center items-center py-12">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            <span className="ml-2 text-gray-300">Loading system health data...</span>
           </div>
         ) : error ? (
-          <div className="text-center py-8 text-red-400">
-            <AlertCircle className="w-8 h-8 mx-auto mb-2" />
-            {error}
-            <Button 
-              variant="outline" 
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <AlertCircle className="w-10 h-10 text-red-400 mb-2" />
+            <p className="text-red-400 mb-4">{error}</p>
+            <Button
+              variant="outline"
               className="mt-4 border-white/10 hover:bg-white/10"
               onClick={fetchSystemHealth}
             >
@@ -213,18 +207,19 @@ export function AdminSystemHealth({ refreshInterval = 30000, initialLoad = true 
             </Button>
           </div>
         ) : healthData ? (
-        {/* Current Metrics */}
-        <div className="grid grid-cols-2 gap-4">
-          {systemMetrics.map((metric, index) => (
-            <div key={index} className="neomorphism p-3 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-400">{metric.icon}</span>
-                  <span className="text-sm text-gray-300">{metric.name}</span>
-                </div>
-                <Badge className={metric.status}>
-                  {metric.statusText}
-                </Badge>
+          <>
+            {/* Current Metrics */}
+            <div className="grid grid-cols-2 gap-4">
+              {systemMetrics.map((metric, index) => (
+                <div key={index} className="neomorphism p-3 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400">{metric.icon}</span>
+                      <span className="text-sm text-gray-300">{metric.name}</span>
+                    </div>
+                  <Badge className={metric.status}>
+                    {metric.statusText}
+                  </Badge>
               </div>
               <div className="text-xl font-bold text-white mb-1">
                 {metric.value} <span className="text-sm text-gray-400">{metric.unit}</span>
@@ -351,6 +346,7 @@ export function AdminSystemHealth({ refreshInterval = 30000, initialLoad = true 
             )}
           </div>
         </div>
+          </>
         ) : null}
       </CardContent>
     </Card>

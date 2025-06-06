@@ -1,10 +1,38 @@
 // src/lib/services/advanced-cross-browser-analyzer.ts
 // Advanced cross-browser testing analyzer service using Puppeteer
 
-import puppeteer from 'puppeteer';
+// Safely detect environment
+const isServer = typeof window === 'undefined';
+
+// Only import browser environment if we're on the server
+if (isServer) {
+  // Import mock browser environment for server-side rendering
+  require('./mock-browser-environment');
+}
+
+// Use dynamic imports for browser-specific modules
+let puppeteer: any;
+let compareImages: any;
+
+// Only load these modules in client-side environment
+if (!isServer) {
+  // Use dynamic imports to load browser-specific modules only on client
+  const loadDependencies = async () => {
+    try {
+      puppeteer = (await import('puppeteer')).default;
+      const resembleJs = await import('resemblejs');
+      compareImages = resembleJs.compareImages || resembleJs.default?.compareImages;
+    } catch (error) {
+      console.error('Failed to load browser testing dependencies:', error);
+    }
+  };
+  
+  // Load dependencies if in browser
+  loadDependencies();
+}
+
 import { BaseAnalyzer } from './base-analyzer';
 import { CrossBrowserAnalysisResult, BrowserCompatibilityResult, VisualConsistencyResult, FeatureCompatibilityResult, ResponsiveConsistencyResult } from '../types/advanced-audit';
-import { compareImages } from 'resemblejs';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -466,7 +494,25 @@ export class AdvancedCrossBrowserAnalyzer extends BaseAnalyzer {
       issues,
       score: avgScore
     };
-  }browserResults.push({
+  }
+  
+  // Method to analyze cross-browser compatibility
+  async analyzeCrossBrowserCompatibility(url: string): Promise<CrossBrowserAnalysisResult> {
+    const browserResults: BrowserResult[] = [];
+    const issues: string[] = [];
+    
+    for (const config of this.browserConfigs) {
+      const browser = await puppeteer.launch(config.options);
+      const page = await browser.newPage();
+      
+      try {
+        await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
+        
+        // Perform browser-specific tests
+        const browserIssues = await this.testBrowserCompatibility(page, config);
+        const score = 100 - (browserIssues.length * 10);
+        
+        browserResults.push({
           browser: config.name,
           issues: browserIssues,
           score: Math.max(0, Math.min(100, score)),

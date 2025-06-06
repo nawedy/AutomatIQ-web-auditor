@@ -616,6 +616,39 @@ export interface CrossBrowserTestingResult {
   summary: CrossBrowserSummary;
 }
 
+export interface CrossBrowserAnalysisResult {
+  score: number;
+  browserCompatibility: BrowserCompatibilityResult;
+  visualConsistency: VisualConsistencyResult;
+  featureCompatibility: FeatureCompatibilityResult;
+  responsiveConsistency: ResponsiveConsistencyResult;
+  issues: string[];
+}
+
+export interface BrowserCompatibilityResult {
+  browserResults: any[];
+  issues: string[];
+  score: number;
+}
+
+export interface VisualConsistencyResult {
+  comparisonResults: any[];
+  issues: string[];
+  score: number;
+}
+
+export interface FeatureCompatibilityResult {
+  featureResults: any[];
+  issues: string[];
+  score: number;
+}
+
+export interface ResponsiveConsistencyResult {
+  responsiveResults: any[];
+  issues: string[];
+  score: number;
+}
+
 export interface BrowserTestResult {
   browser: string;
   version: string;

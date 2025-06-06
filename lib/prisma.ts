@@ -17,6 +17,9 @@ export const prisma =
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
+// Also export as default for compatibility with existing imports
+export default prisma;
+
 // Helper function to set the current user ID for Row-Level Security
 export function setCurrentUserId(userId: string) {
   return prisma.$executeRaw`SELECT set_config('app.current_user_id', ${userId}, true)`;

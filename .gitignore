@@ -9,6 +9,11 @@
 
 # production
 /build
+/dist
+
+# webpack cache
+/dist/cache/
+*.pack
 
 # debug
 npm-debug.log*
@@ -29,3 +34,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Documents
+/docs

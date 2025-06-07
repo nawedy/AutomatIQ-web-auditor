@@ -4,8 +4,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth-utils';
 import { prisma } from '../../../../lib/prisma';
-import { AdvancedAuditOrchestrator } from '@/lib/services/advanced-audit-orchestrator';
-import { AuditStatus } from '@/lib/types/advanced-audit';
+import { ServerOnlyAuditService } from '@/lib/services/server-only/advanced-audit-service';
+import { AuditStatus } from '../../../../types/audit';
 
 /**
  * Get a specific audit by ID
@@ -18,17 +18,15 @@ export const GET = withAuth(async (
   try {
     const auditId = params.id;
 
-    // Get the audit with results
+    // Get the audit with website info for ownership check
     const audit = await prisma.audit.findUnique({
-      where: {
-        id: auditId,
-        userId: user.id
-      },
+      where: { id: auditId },
       include: {
         website: {
           select: {
             name: true,
-            url: true
+            url: true,
+            userId: true
           }
         }
       }
@@ -36,25 +34,41 @@ export const GET = withAuth(async (
 
     if (!audit) {
       return NextResponse.json(
-        { error: 'Audit not found or access denied' },
+        { error: 'Audit not found' },
         { status: 404 }
       );
     }
 
-    // Get detailed audit results
-    const orchestrator = new AdvancedAuditOrchestrator(prisma);
-    const auditResults = await orchestrator.getAuditResult(auditId);
+    // Check ownership via website.userId
+    if (!audit.website || audit.website.userId !== user.id) {
+      return NextResponse.json(
+        { error: 'Access denied' },
+        { status: 403 }
+      );
+    }
 
-    // Get audit issues
-    const issues = await prisma.auditIssue.findMany({
-      where: { auditId },
-      orderBy: { severity: 'desc' }
+    // Get audit results
+    const auditResults = await prisma.auditResult.findMany({
+      where: { auditId }
     });
+    
+    // Get audit summary
+    const auditSummary = await prisma.auditSummary.findUnique({
+      where: { auditId }
+    });
+    
+    // Parse summaryReport if it exists
+    const summaryReport = auditSummary?.summaryReport ? 
+      (typeof auditSummary.summaryReport === 'string' ? 
+        JSON.parse(auditSummary.summaryReport) : auditSummary.summaryReport) : {};
 
     return NextResponse.json({
       audit,
       results: auditResults,
-      issues
+      summary: {
+        ...auditSummary,
+        summaryReport
+      }
     });
   } catch (error) {
     console.error('Error fetching audit:', error);
@@ -76,12 +90,10 @@ export const DELETE = withAuth(async (
   try {
     const auditId = params.id;
 
-    // Check if audit exists and belongs to user
+    // Check if audit exists and get website for ownership check
     const audit = await prisma.audit.findUnique({
-      where: {
-        id: auditId,
-        userId: user.id
-      }
+      where: { id: auditId },
+      include: { website: true }
     });
 
     if (!audit) {
@@ -91,8 +103,8 @@ export const DELETE = withAuth(async (
       );
     }
 
-    // Check ownership
-    if (audit.userId !== user.id) {
+    // Check ownership via website.userId
+    if (!audit.website || audit.website.userId !== user.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
@@ -101,7 +113,6 @@ export const DELETE = withAuth(async (
 
     // Delete audit and related data in a transaction
     await prisma.$transaction([
-      prisma.auditIssue.deleteMany({ where: { auditId } }),
       prisma.auditResult.deleteMany({ where: { auditId } }),
       prisma.auditSummary.deleteMany({ where: { auditId } }),
       prisma.audit.delete({ where: { id: auditId } })
@@ -130,14 +141,12 @@ export const PATCH = withAuth(async (
 ): Promise<NextResponse> => {
   try {
     const auditId = params.id;
-    const { action, categories } = await request.json();
+    const { action, categories: requestCategories } = await request.json();
 
-    // Check if audit exists and belongs to user
+    // Check if audit exists and get website for ownership check
     const audit = await prisma.audit.findUnique({
-      where: {
-        id: auditId,
-        userId: user.id
-      }
+      where: { id: auditId },
+      include: { website: true }
     });
 
     if (!audit) {
@@ -147,13 +156,30 @@ export const PATCH = withAuth(async (
       );
     }
 
-    // Check ownership
-    if (audit.userId !== user.id) {
+    // Check ownership via website.userId
+    if (!audit.website || audit.website.userId !== user.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
       );
     }
+    
+    // Get the website URL for audit
+    const websiteUrl = audit.website.url;
+    
+    // Get audit summary to extract categories if needed
+    const auditSummary = await prisma.auditSummary.findUnique({
+      where: { auditId }
+    });
+    
+    // Parse summaryReport if it exists to get categories
+    const summaryReport = auditSummary?.summaryReport ? 
+      (typeof auditSummary.summaryReport === 'string' ? 
+        JSON.parse(auditSummary.summaryReport) : auditSummary.summaryReport) : {};
+    
+    // Use categories from request, or from summary, or default
+    const categories = requestCategories || 
+      (summaryReport.categories || ['performance', 'accessibility', 'seo', 'best-practices']);
 
     // Handle different actions
     switch (action) {
@@ -163,27 +189,28 @@ export const PATCH = withAuth(async (
           where: { id: auditId },
           data: {
             status: 'queued' as AuditStatus,
-            categories: categories || audit.categories,
             updatedAt: new Date()
           }
         });
+        
+        // Update summary report with categories if it exists
+        if (auditSummary) {
+          const updatedSummaryReport = {
+            ...summaryReport,
+            categories
+          };
+          
+          await prisma.auditSummary.update({
+            where: { auditId },
+            data: {
+              summaryReport: updatedSummaryReport
+            }
+          });
+        }
 
-        // Start the audit asynchronously
-        setTimeout(async () => {
-          try {
-            const orchestrator = new AdvancedAuditOrchestrator(prisma);
-            await orchestrator.runAudit(auditId, audit.url, categories || audit.categories as string[]);
-          } catch (error) {
-            console.error('Error rerunning audit:', error);
-            await prisma.audit.update({
-              where: { id: auditId },
-              data: {
-                status: 'failed' as AuditStatus,
-                updatedAt: new Date(),
-              }
-            });
-          }
-        }, 0);
+        // Start the audit asynchronously using ServerOnlyAuditService
+        const auditService = new ServerOnlyAuditService();
+        await auditService.runAudit(auditId, websiteUrl, categories);
 
         return NextResponse.json({
           success: true,
